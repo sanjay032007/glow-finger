@@ -560,7 +560,7 @@ function App() {
         >
           
           {/* Colors */}
-          <div className="relative shrink-0 flex items-center">
+          <div className="flex items-center gap-2 shrink-0">
             <button
               onClick={() => {
                 audio.playClick();
@@ -578,10 +578,10 @@ function App() {
             <AnimatePresence>
               {showColorPicker && (
                 <motion.div
-                  initial={{ opacity: 0, y: 15, scale: 0.9 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={{ opacity: 0, y: 15, scale: 0.9 }}
-                  className="absolute bottom-12 left-1/2 -translate-x-1/2 flex flex-col gap-2 bg-[#1a1a1e]/90 backdrop-blur-2xl border border-white/10 p-2 rounded-full shadow-[0_10px_30px_rgba(0,0,0,0.5)] z-30 pointer-events-auto"
+                  initial={{ width: 0, opacity: 0 }}
+                  animate={{ width: 'auto', opacity: 1 }}
+                  exit={{ width: 0, opacity: 0 }}
+                  className="flex items-center gap-2 overflow-hidden pr-1"
                 >
                   {COLORS.map(c => (
                     <button
@@ -592,7 +592,7 @@ function App() {
                         if (mode === 'ERASE') setMode('DRAW');
                         setShowColorPicker(false);
                       }}
-                      className={`shrink-0 w-7 h-7 rounded-full transition-transform hover:scale-115 ${color === c && mode !== 'ERASE' ? 'ring-2 ring-white' : 'opacity-80 hover:opacity-100'}`}
+                      className={`shrink-0 w-7 h-7 rounded-full transition-all duration-200 hover:scale-115 ${color === c && mode !== 'ERASE' ? 'ring-2 ring-white scale-105' : 'opacity-70 hover:opacity-100'}`}
                       style={{ backgroundColor: c }}
                     />
                   ))}
