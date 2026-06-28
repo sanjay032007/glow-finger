@@ -261,7 +261,7 @@ function App() {
             <button 
               onClick={toggleAudio}
               onMouseEnter={handleHover}
-              className="p-3 rounded-full bg-white/5 border border-white/10 hover:bg-white/10 transition-all text-[#00f3ff] shadow-xl cursor-pointer"
+              className="shrink-0 p-3 rounded-full bg-white/5 border border-white/10 hover:bg-white/10 transition-all text-[#00f3ff] shadow-xl cursor-pointer"
               title="Toggle Audio Beat"
             >
               {isAudioEnabled ? <Volume2 size={18} /> : <VolumeX size={18} />}
@@ -550,24 +550,23 @@ function App() {
       {/* Floating Action Dock */}
       <motion.div 
         initial={{ y: 100, opacity: 0, x: '-50%' }} animate={{ y: 0, opacity: 1, x: '-50%' }} transition={{ type: 'spring', bounce: 0.4, duration: 0.8, delay: 0.2 }}
-        className="absolute bottom-6 md:bottom-8 left-1/2 flex flex-col gap-3 md:gap-4 items-center z-20 pointer-events-auto w-[96vw] md:w-[95%] max-w-full justify-center px-2 md:px-0"
+        className="absolute bottom-6 md:bottom-8 left-1/2 flex items-center z-20 pointer-events-auto w-[96vw] md:w-[95%] max-w-[900px] justify-center px-1 md:px-0"
       >
-        
-        {/* Colors */}
-        <div className="bg-[#1a1a1e]/80 backdrop-blur-2xl border border-white/10 rounded-3xl md:rounded-full px-5 py-3 flex flex-wrap justify-center items-center gap-3 shadow-[0_20px_40px_rgba(0,0,0,0.4)] max-w-full w-full md:w-auto shrink-0">
+        <div className="bg-[#1a1a1e]/80 backdrop-blur-2xl border border-white/10 rounded-full px-4 py-3 flex items-center gap-2 md:gap-3 shadow-[0_20px_40px_rgba(0,0,0,0.4)] overflow-x-auto hide-scrollbar w-full">
+          
+          {/* Colors */}
           {COLORS.map(c => (
             <button 
               key={c}
               onClick={() => { audio.playClick(); setColor(c); if(mode === 'ERASE') setMode('DRAW'); }}
               onMouseEnter={handleHover}
-              className={`w-8 h-8 rounded-full transition-all duration-300 ${color === c && mode !== 'ERASE' ? 'scale-125 ring-2 ring-white ring-offset-2 ring-offset-[#1a1a1e]' : 'opacity-60 hover:opacity-100 hover:scale-110'}`}
+              className={`shrink-0 w-8 h-8 rounded-full transition-all duration-300 ${color === c && mode !== 'ERASE' ? 'scale-125 ring-2 ring-white ring-offset-2 ring-offset-[#1a1a1e]' : 'opacity-60 hover:opacity-100 hover:scale-110'}`}
               style={{ backgroundColor: c, boxShadow: color === c ? `0 0 20px ${c}80` : 'none' }}
             />
           ))}
-        </div>
 
-        {/* Tools Dock */}
-        <div className="bg-[#1a1a1e]/80 backdrop-blur-2xl border border-white/10 rounded-3xl md:rounded-full px-4 py-3 flex flex-wrap justify-center items-center gap-2 shadow-[0_20px_40px_rgba(0,0,0,0.4)] max-w-full w-full md:w-auto shrink-0">
+          <div className="shrink-0 w-px h-8 bg-white/10 mx-1 md:mx-2"></div>
+
           {/* Brushes */}
           <button onClick={() => { audio.playClick(); setMode('DRAW'); }} onMouseEnter={handleHover} className={`p-3 rounded-full transition-all ${mode === 'DRAW' ? 'bg-white/10 text-[#00f3ff]' : 'text-white/50 hover:text-white hover:bg-white/5'}`} title="Neon Pen">
             <Palette size={20} />
@@ -622,19 +621,19 @@ function App() {
           <div className="hidden md:block w-px h-8 bg-white/10 mx-2"></div>
           
           {/* Actions */}
-          <button onClick={() => { audio.playClick(); undo(); }} onMouseEnter={handleHover} className="p-3 rounded-full text-white/50 hover:text-white hover:bg-white/5 transition-all" title="Undo (Z)">
+          <button onClick={() => { audio.playClick(); undo(); }} onMouseEnter={handleHover} className="shrink-0 p-3 rounded-full text-white/50 hover:text-white hover:bg-white/5 transition-all" title="Undo (Z)">
             <Undo size={20} />
           </button>
-          <button onClick={() => { audio.playClick(); clearCanvas(); }} onMouseEnter={handleHover} className="p-3 rounded-full text-white/50 hover:text-red-400 hover:bg-red-500/10 transition-all" title="Clear (C)">
+          <button onClick={() => { audio.playClick(); clearCanvas(); }} onMouseEnter={handleHover} className="shrink-0 p-3 rounded-full text-white/50 hover:text-red-400 hover:bg-red-500/10 transition-all" title="Clear (C)">
             <Trash2 size={20} />
           </button>
-          <button onClick={handleSaveToGallery} onMouseEnter={handleHover} className="p-3 rounded-full text-white/50 hover:text-[#39ff14] hover:bg-white/5 transition-all" title="Save to Local Gallery">
+          <button onClick={handleSaveToGallery} onMouseEnter={handleHover} className="shrink-0 p-3 rounded-full text-white/50 hover:text-[#39ff14] hover:bg-white/5 transition-all" title="Save to Local Gallery">
             <FolderHeart size={20} />
           </button>
           <button 
             onClick={cycleEnvironment} 
             onMouseEnter={handleHover} 
-            className="p-3 rounded-full text-white/50 hover:text-[#b026ff] hover:bg-white/5 transition-all hidden sm:block" 
+            className="shrink-0 p-3 rounded-full text-white/50 hover:text-[#b026ff] hover:bg-white/5 transition-all hidden sm:block" 
             title={`Environment: ${envMode}`}
           >
             <ImageIcon size={20} />
