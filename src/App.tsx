@@ -203,7 +203,7 @@ function App() {
 
   if (!isLaunched) {
     return (
-      <div className="relative w-full min-h-screen bg-[#030305] text-white flex flex-col justify-between overflow-x-hidden font-sans selection:bg-[#00f3ff]/30">
+      <div className="relative w-full min-h-[100dvh] bg-[#030305] text-white flex flex-col justify-between overflow-x-hidden font-sans selection:bg-[#00f3ff]/30">
         
         {/* Animated Background Orbs */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
@@ -357,7 +357,7 @@ function App() {
     <motion.div 
       animate={{ x: gameEngine.shake ? [-15, 15, -10, 10, -5, 5, 0] : 0 }}
       transition={{ duration: 0.3 }}
-      className="relative w-full h-screen bg-[#050505] overflow-hidden"
+      className="relative w-full h-[100dvh] bg-[#050505] overflow-hidden"
     >
       <CameraFilters />
       <Onboarding handStateRef={handStateRef} />
