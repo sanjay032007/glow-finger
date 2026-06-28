@@ -45,6 +45,7 @@ function App() {
   const [envMode, setEnvMode] = useState<EnvMode>('NEON');
   
   const [showSliders, setShowSliders] = useState(false);
+  const [showColorPicker, setShowColorPicker] = useState(false);
   const [isFlashing, setIsFlashing] = useState(false);
   
   const [faceStyle, setFaceStyle] = useState<FaceStyle>('NORMAL');
@@ -358,6 +359,7 @@ function App() {
       animate={{ x: gameEngine.shake ? [-15, 15, -10, 10, -5, 5, 0] : 0 }}
       transition={{ duration: 0.3 }}
       className="relative w-full h-[100dvh] bg-[#050505] overflow-hidden"
+      onClick={() => setShowColorPicker(false)}
     >
       <CameraFilters />
       <Onboarding handStateRef={handStateRef} />
@@ -552,38 +554,72 @@ function App() {
         initial={{ y: 100, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ type: 'spring', bounce: 0.4, duration: 0.8, delay: 0.2 }}
         className="absolute bottom-8 left-0 right-0 w-full px-4 flex justify-center z-20 pointer-events-none"
       >
-        <div className="pointer-events-auto bg-[#1a1a1e]/80 backdrop-blur-2xl border border-white/10 rounded-full px-4 py-3 flex items-center gap-3 shadow-[0_20px_40px_rgba(0,0,0,0.4)] overflow-x-auto hide-scrollbar max-w-full w-max">
+        <div 
+          onClick={(e) => e.stopPropagation()}
+          className="pointer-events-auto bg-[#1a1a1e]/80 backdrop-blur-2xl border border-white/10 rounded-full px-4 py-3 flex items-center gap-3 shadow-[0_20px_40px_rgba(0,0,0,0.4)] overflow-x-auto hide-scrollbar max-w-full w-max"
+        >
           
           {/* Colors */}
-          {COLORS.map(c => (
-            <button 
-              key={c}
-              onClick={() => { audio.playClick(); setColor(c); if(mode === 'ERASE') setMode('DRAW'); }}
+          <div className="relative shrink-0 flex items-center">
+            <button
+              onClick={() => {
+                audio.playClick();
+                setShowColorPicker(!showColorPicker);
+              }}
               onMouseEnter={handleHover}
-              className={`shrink-0 w-8 h-8 rounded-full transition-all duration-300 ${color === c && mode !== 'ERASE' ? 'scale-125 ring-2 ring-white ring-offset-2 ring-offset-[#1a1a1e]' : 'opacity-60 hover:opacity-100 hover:scale-110'}`}
-              style={{ backgroundColor: c, boxShadow: color === c ? `0 0 20px ${c}80` : 'none' }}
+              className={`shrink-0 w-8 h-8 rounded-full transition-all duration-300 ring-2 ring-white/50 hover:ring-white ${showColorPicker ? 'scale-110' : 'hover:scale-110'}`}
+              style={{ 
+                backgroundColor: mode === 'ERASE' ? '#ffffff' : color, 
+                boxShadow: mode !== 'ERASE' ? `0 0 15px ${color}` : 'none' 
+              }}
+              title="Change Color"
             />
-          ))}
+
+            <AnimatePresence>
+              {showColorPicker && (
+                <motion.div
+                  initial={{ opacity: 0, y: 15, scale: 0.9 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 15, scale: 0.9 }}
+                  className="absolute bottom-12 left-1/2 -translate-x-1/2 flex flex-col gap-2 bg-[#1a1a1e]/90 backdrop-blur-2xl border border-white/10 p-2 rounded-full shadow-[0_10px_30px_rgba(0,0,0,0.5)] z-30 pointer-events-auto"
+                >
+                  {COLORS.map(c => (
+                    <button
+                      key={c}
+                      onClick={() => {
+                        audio.playClick();
+                        setColor(c);
+                        if (mode === 'ERASE') setMode('DRAW');
+                        setShowColorPicker(false);
+                      }}
+                      className={`shrink-0 w-7 h-7 rounded-full transition-transform hover:scale-115 ${color === c && mode !== 'ERASE' ? 'ring-2 ring-white' : 'opacity-80 hover:opacity-100'}`}
+                      style={{ backgroundColor: c }}
+                    />
+                  ))}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
 
           <div className="shrink-0 w-px h-8 bg-white/10 mx-1 md:mx-2"></div>
 
           {/* Brushes */}
-          <button onClick={() => { audio.playClick(); setMode('DRAW'); }} onMouseEnter={handleHover} className={`p-3 rounded-full transition-all ${mode === 'DRAW' ? 'bg-white/10 text-[#00f3ff]' : 'text-white/50 hover:text-white hover:bg-white/5'}`} title="Neon Pen">
+          <button onClick={() => { audio.playClick(); setMode('DRAW'); setShowColorPicker(false); }} onMouseEnter={handleHover} className={`p-3 rounded-full transition-all ${mode === 'DRAW' ? 'bg-white/10 text-[#00f3ff]' : 'text-white/50 hover:text-white hover:bg-white/5'}`} title="Neon Pen">
             <Palette size={20} />
           </button>
-          <button onClick={() => { audio.playClick(); setMode('COSMIC'); }} onMouseEnter={handleHover} className={`p-3 rounded-full transition-all ${mode === 'COSMIC' ? 'bg-white/10 text-yellow-400' : 'text-white/50 hover:text-white hover:bg-white/5'}`} title="Cosmic Sparkles">
+          <button onClick={() => { audio.playClick(); setMode('COSMIC'); setShowColorPicker(false); }} onMouseEnter={handleHover} className={`p-3 rounded-full transition-all ${mode === 'COSMIC' ? 'bg-white/10 text-yellow-400' : 'text-white/50 hover:text-white hover:bg-white/5'}`} title="Cosmic Sparkles">
             <SparklesIcon size={20} />
           </button>
-          <button onClick={() => { audio.playClick(); setMode('RAINBOW'); }} onMouseEnter={handleHover} className={`p-3 rounded-full transition-all ${mode === 'RAINBOW' ? 'bg-white/10 text-[#ff8c00]' : 'text-white/50 hover:text-white hover:bg-white/5'}`} title="Rainbow Path">
+          <button onClick={() => { audio.playClick(); setMode('RAINBOW'); setShowColorPicker(false); }} onMouseEnter={handleHover} className={`p-3 rounded-full transition-all ${mode === 'RAINBOW' ? 'bg-white/10 text-[#ff8c00]' : 'text-white/50 hover:text-white hover:bg-white/5'}`} title="Rainbow Path">
             <Rainbow size={20} />
           </button>
-          <button onClick={() => { audio.playClick(); setMode('FIRE'); }} onMouseEnter={handleHover} className={`p-3 rounded-full transition-all ${mode === 'FIRE' ? 'bg-white/10 text-red-500' : 'text-white/50 hover:text-white hover:bg-white/5'}`} title="Rising Flame">
+          <button onClick={() => { audio.playClick(); setMode('FIRE'); setShowColorPicker(false); }} onMouseEnter={handleHover} className={`p-3 rounded-full transition-all ${mode === 'FIRE' ? 'bg-white/10 text-red-500' : 'text-white/50 hover:text-white hover:bg-white/5'}`} title="Rising Flame">
             <Flame size={20} />
           </button>
-          <button onClick={() => { audio.playClick(); setMode('LASER'); }} onMouseEnter={handleHover} className={`p-3 rounded-full transition-all ${mode === 'LASER' ? 'bg-white/10 text-purple-400' : 'text-white/50 hover:text-white hover:bg-white/5'}`} title="Double Lasers">
+          <button onClick={() => { audio.playClick(); setMode('LASER'); setShowColorPicker(false); }} onMouseEnter={handleHover} className={`p-3 rounded-full transition-all ${mode === 'LASER' ? 'bg-white/10 text-purple-400' : 'text-white/50 hover:text-white hover:bg-white/5'}`} title="Double Lasers">
             <Zap size={20} />
           </button>
-          <button onClick={() => { audio.playClick(); setMode('ERASE'); }} onMouseEnter={handleHover} className={`p-3 rounded-full transition-all ${mode === 'ERASE' ? 'bg-white/10 text-[#ff007f]' : 'text-white/50 hover:text-white hover:bg-white/5'}`} title="Erase (E)">
+          <button onClick={() => { audio.playClick(); setMode('ERASE'); setShowColorPicker(false); }} onMouseEnter={handleHover} className={`p-3 rounded-full transition-all ${mode === 'ERASE' ? 'bg-white/10 text-[#ff007f]' : 'text-white/50 hover:text-white hover:bg-white/5'}`} title="Erase (E)">
             <Eraser size={20} />
           </button>
           
