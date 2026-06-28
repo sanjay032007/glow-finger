@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
-import { detectGesture, type GestureType } from '../utils/gestureDetection';
+import { getHandGesture, type GestureType } from '../utils/gestureDetection';
 
 const getHandsClass = () => (window as any).Hands;
+const getFaceMeshClass = () => (window as any).FaceMesh;
 const getCameraClass = () => (window as any).Camera;
 
 interface Point { x: number; y: number; z: number; }
@@ -20,6 +21,7 @@ export const useHandTracking = (videoRef: React.RefObject<HTMLVideoElement>, can
   const debugRef = useRef({ frames: 0, results: 0, gesture: 'NONE', x: 0, y: 0, z: 0 });
   
   const handStateRef = useRef<HandState>({ position: null, gesture: 'NONE' });
+  const [faceLandmarks, setFaceLandmarks] = useState<any[] | null>(null);
 
   const dimensionsRef = useRef({ width: canvasWidth, height: canvasHeight });
   useEffect(() => {
@@ -37,13 +39,15 @@ export const useHandTracking = (videoRef: React.RefObject<HTMLVideoElement>, can
     
     let camera: any = null;
     let hands: any = null;
+    let faceMesh: any = null;
     let pollTimeout: number;
 
     const initTracking = () => {
         const HandsClass = getHandsClass();
+        const FaceMeshClass = getFaceMeshClass();
         const CameraClass = getCameraClass();
 
-        if (!HandsClass || !CameraClass) {
+        if (!HandsClass || !FaceMeshClass || !CameraClass) {
             console.log("Waiting for MediaPipe CDN scripts to load...");
             pollTimeout = setTimeout(initTracking, 500) as any;
             return;
@@ -54,16 +58,19 @@ export const useHandTracking = (videoRef: React.RefObject<HTMLVideoElement>, can
                 locateFile: (file: string) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
             });
 
+            const isMobile = window.innerWidth < 768;
             hands.setOptions({
-                maxNumHands: 1, modelComplexity: 1,
-                minDetectionConfidence: 0.7, minTrackingConfidence: 0.7
+                maxNumHands: 1, 
+                modelComplexity: isMobile ? 0 : 1,
+                minDetectionConfidence: 0.7, 
+                minTrackingConfidence: 0.7
             });
 
             hands.onResults((results: any) => {
                 debugRef.current.results++;
                 if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
                     const rawLandmarks = results.multiHandLandmarks[0];
-                    const gesture = detectGesture(rawLandmarks);
+                    const gesture = getHandGesture(rawLandmarks);
                     
                     const videoEl = videoRef.current;
                     const videoWidth = videoEl ? videoEl.videoWidth : 1280;
@@ -110,15 +117,38 @@ export const useHandTracking = (videoRef: React.RefObject<HTMLVideoElement>, can
                 }
             });
 
+            faceMesh = new FaceMeshClass({
+                locateFile: (file: string) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`
+            });
+            faceMesh.setOptions({
+                maxNumFaces: 1,
+                refineLandmarks: true,
+                minDetectionConfidence: 0.5,
+                minTrackingConfidence: 0.5
+            });
+            faceMesh.onResults((results: any) => {
+                if (results.multiFaceLandmarks && results.multiFaceLandmarks.length > 0) {
+                    setFaceLandmarks(results.multiFaceLandmarks[0]);
+                } else {
+                    setFaceLandmarks(null);
+                }
+            });
+
             camera = new CameraClass(videoRef.current, {
                 onFrame: async () => { 
                     debugRef.current.frames++;
-                    if (videoRef.current && hands) {
-                        try { await hands.send({ image: videoRef.current }); } 
-                        catch(err: any) { console.error("Hands send error:", err); }
+                    if (videoRef.current && hands && faceMesh) {
+                        try { 
+                            await Promise.all([
+                                hands.send({ image: videoRef.current }),
+                                faceMesh.send({ image: videoRef.current })
+                            ]);
+                        } 
+                        catch(err: any) { console.error("MediaPipe send error:", err); }
                     }
                 },
-                width: 1280, height: 720
+                width: isMobile ? 640 : 1280, 
+                height: isMobile ? 480 : 720
             });
             camera.start().then(() => setIsReady(true)).catch(() => setError('Camera start failed. Please allow camera permissions.'));
         } catch (e: any) { 
@@ -132,8 +162,9 @@ export const useHandTracking = (videoRef: React.RefObject<HTMLVideoElement>, can
         clearTimeout(pollTimeout);
         if (camera) camera.stop(); 
         if (hands) hands.close(); 
+        if (faceMesh) faceMesh.close();
     };
   }, [videoRef, enabled]);
 
-  return { isReady, error, handStateRef, debugInfo };
+  return { isReady, error, handStateRef, debugInfo, faceLandmarks };
 };

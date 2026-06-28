@@ -19,8 +19,11 @@ import { audio } from './utils/audio';
 import { 
   Palette, Eraser, Camera, Trash2, Undo, Video, Bug, 
   Sparkles as SparklesIcon, Gamepad2, Trophy, Flame, Play, X, 
-  Volume2, VolumeX, Zap, Rainbow, FolderHeart, Repeat, SlidersHorizontal, Share2, Image as ImageIcon
+  Volume2, VolumeX, Zap, Rainbow, FolderHeart, Repeat, SlidersHorizontal, Share2, Image as ImageIcon, Sparkles
 } from 'lucide-react';
+import { CameraFilters } from './components/CameraFilters';
+import type { FaceStyle } from './components/CameraFilters';
+import { FaceARCanvas } from './components/FaceARCanvas';
 
 const COLORS = ['#00f3ff', '#b026ff', '#ff007f', '#39ff14', '#ff8c00', '#ffffff'];
 
@@ -34,6 +37,7 @@ function App() {
   const [size, setSize] = useState(8);
   const [glow, setGlow] = useState(25);
   const [mode, setMode] = useState<DrawMode>('DRAW');
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [symmetry, setSymmetry] = useState<SymmetryMode>('NONE');
   const [showPreview, setShowPreview] = useState(true);
   const [showDebug, setShowDebug] = useState(false);
@@ -43,12 +47,19 @@ function App() {
   const [showSliders, setShowSliders] = useState(false);
   const [isFlashing, setIsFlashing] = useState(false);
   
+  const [faceStyle, setFaceStyle] = useState<FaceStyle>('NORMAL');
+  const lastGestureRef = useRef<string>('NONE');
+  const [showStyleToast, setShowStyleToast] = useState(false);
+  
   const [isRecording, setIsRecording] = useState(false);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const recordedChunksRef = useRef<BlobPart[]>([]);
 
   useEffect(() => {
-    const handleResize = () => setDimensions({ width: window.innerWidth, height: window.innerHeight });
+    const handleResize = () => {
+      setDimensions({ width: window.innerWidth, height: window.innerHeight });
+      setIsMobile(window.innerWidth < 768);
+    };
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
@@ -96,9 +107,36 @@ function App() {
     });
   };
 
-  const { isReady, error, handStateRef, debugInfo } = useHandTracking(videoRef, dimensions.width, dimensions.height, isLaunched);
+  const { isReady, error, handStateRef, debugInfo, faceLandmarks } = useHandTracking(videoRef, dimensions.width, dimensions.height, isLaunched);
   const gameEngine = useGameEngine();
   const { clearCanvas, saveToGallery, undo } = useSmoothDrawing(canvasRef, handStateRef, { color, size, glow, mode, symmetry }, gameEngine, videoRef, showPreview);
+
+  // Cycle face style on gestures
+  useEffect(() => {
+    if (debugInfo.gesture !== lastGestureRef.current) {
+      if (debugInfo.gesture === 'PEACE') {
+        audio.playHover();
+        setFaceStyle('NEON');
+        setShowStyleToast(true);
+      } else if (debugInfo.gesture === 'ROCK') {
+        audio.playHover();
+        setFaceStyle('POP_ART');
+        setShowStyleToast(true);
+      } else if (debugInfo.gesture === 'THUMBS_UP') {
+        audio.playHover();
+        setFaceStyle('ANIME');
+        setShowStyleToast(true);
+      } else if (debugInfo.gesture === 'ERASE') {
+        setFaceStyle('NORMAL');
+      }
+      
+      if (showStyleToast) {
+        const timer = setTimeout(() => setShowStyleToast(false), 2000);
+        return () => clearTimeout(timer);
+      }
+    }
+    lastGestureRef.current = debugInfo.gesture;
+  }, [debugInfo.gesture]);
 
   const handleSaveToGallery = () => {
     setIsFlashing(true);
@@ -189,10 +227,12 @@ function App() {
             {/* Interactive 3D Hand */}
             <Hand3D />
 
-            {/* Post-Processing Neon Bloom */}
-            <EffectComposer>
-              <Bloom luminanceThreshold={0.15} luminanceSmoothing={0.9} height={300} intensity={1.5} />
-            </EffectComposer>
+            {/* Post-Processing Neon Bloom (Disabled on mobile for performance) */}
+            {!isMobile && (
+              <EffectComposer>
+                <Bloom luminanceThreshold={0.15} luminanceSmoothing={0.9} height={300} intensity={1.5} />
+              </EffectComposer>
+            )}
           </Canvas>
         </div>
 
@@ -319,10 +359,12 @@ function App() {
       transition={{ duration: 0.3 }}
       className="relative w-full h-screen bg-[#050505] overflow-hidden"
     >
+      <CameraFilters />
       <Onboarding handStateRef={handStateRef} />
       <FPSIndicator />
       
-      <CameraView videoRef={videoRef} showPreview={showPreview} />
+      <CameraView videoRef={videoRef} showPreview={showPreview} faceStyle={faceStyle} />
+      {faceLandmarks && <FaceARCanvas faceLandmarks={faceLandmarks} faceStyle={faceStyle} width={dimensions.width} height={dimensions.height} />}
       <DrawingCanvas canvasRef={canvasRef} width={dimensions.width} height={dimensions.height} />
       
       {/* Real-time Gesture Feedback Badge */}
@@ -350,27 +392,48 @@ function App() {
                     ? 'bg-[#00f3ff]/90 border-[#00f3ff] shadow-[0_0_20px_rgba(0,243,255,0.4)]'
                     : debugInfo.gesture === 'PAUSE'
                       ? 'bg-[#ff007f]/90 border-[#ff007f] shadow-[0_0_20px_rgba(255,0,127,0.4)]'
-                      : 'bg-white/10 border-white/10 text-white shadow-none'
+                      : debugInfo.gesture === 'PEACE'
+                        ? 'bg-[#b026ff]/90 border-[#b026ff] shadow-[0_0_20px_rgba(176,38,255,0.4)] text-white'
+                        : 'bg-white/10 border-white/10 text-white shadow-none'
                 }`}
               >
                 <span className="relative flex h-2 w-2">
                   <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${
-                    debugInfo.gesture === 'DRAW' ? 'bg-black' : debugInfo.gesture === 'PAUSE' ? 'bg-black' : 'bg-white'
+                    debugInfo.gesture === 'DRAW' || debugInfo.gesture === 'PAUSE' ? 'bg-black' : 'bg-white'
                   }`}></span>
                   <span className={`relative inline-flex rounded-full h-2 w-2 ${
-                    debugInfo.gesture === 'DRAW' ? 'bg-black' : debugInfo.gesture === 'PAUSE' ? 'bg-black' : 'bg-white'
+                    debugInfo.gesture === 'DRAW' || debugInfo.gesture === 'PAUSE' ? 'bg-black' : 'bg-white'
                   }`}></span>
                 </span>
                 {debugInfo.gesture === 'DRAW' 
                   ? '✏️ Drawing' 
                   : debugInfo.gesture === 'PAUSE' 
                     ? '⏸️ Paused' 
-                    : '👋 Hand Active'}
+                    : debugInfo.gesture === 'PEACE'
+                      ? '✌️ Style Change'
+                      : '👋 Hand Active'}
               </motion.div>
             )}
           </AnimatePresence>
         </div>
       )}
+
+      {/* Face Style Toast */}
+      <AnimatePresence>
+        {showStyleToast && (
+          <motion.div
+            initial={{ y: 20, opacity: 0, x: '-50%' }}
+            animate={{ y: 0, opacity: 1, x: '-50%' }}
+            exit={{ y: 20, opacity: 0, x: '-50%' }}
+            className="absolute bottom-32 left-1/2 z-40 pointer-events-none"
+          >
+            <div className="bg-white text-black font-extrabold px-6 py-3 rounded-2xl shadow-[0_0_40px_rgba(255,255,255,0.4)] flex items-center gap-3">
+              <Sparkles size={20} className="text-[#b026ff]" />
+              <span className="uppercase tracking-widest text-sm">STYLE: {faceStyle}</span>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Top HUD Bar for Game Mode */}
       <AnimatePresence>
@@ -487,11 +550,11 @@ function App() {
       {/* Floating Action Dock */}
       <motion.div 
         initial={{ y: 100, opacity: 0, x: '-50%' }} animate={{ y: 0, opacity: 1, x: '-50%' }} transition={{ type: 'spring', bounce: 0.4, duration: 0.8, delay: 0.2 }}
-        className="absolute bottom-8 left-1/2 flex gap-4 items-center z-20 pointer-events-auto w-[95%] md:w-auto justify-center"
+        className="absolute bottom-8 left-1/2 flex flex-col md:flex-row gap-4 items-center z-20 pointer-events-auto w-[95%] max-w-full justify-center"
       >
         
         {/* Colors */}
-        <div className="bg-[#1a1a1e]/80 backdrop-blur-2xl border border-white/10 rounded-full px-5 py-3 flex items-center gap-3 shadow-[0_20px_40px_rgba(0,0,0,0.4)]">
+        <div className="bg-[#1a1a1e]/80 backdrop-blur-2xl border border-white/10 rounded-full px-5 py-3 flex items-center gap-3 shadow-[0_20px_40px_rgba(0,0,0,0.4)] overflow-x-auto hide-scrollbar max-w-full shrink-0">
           {COLORS.map(c => (
             <button 
               key={c}
@@ -504,7 +567,7 @@ function App() {
         </div>
 
         {/* Tools Dock */}
-        <div className="bg-[#1a1a1e]/80 backdrop-blur-2xl border border-white/10 rounded-full px-3 py-3 flex items-center gap-1 shadow-[0_20px_40px_rgba(0,0,0,0.4)]">
+        <div className="bg-[#1a1a1e]/80 backdrop-blur-2xl border border-white/10 rounded-full px-3 py-3 flex items-center gap-1 shadow-[0_20px_40px_rgba(0,0,0,0.4)] overflow-x-auto hide-scrollbar max-w-full shrink-0">
           {/* Brushes */}
           <button onClick={() => { audio.playClick(); setMode('DRAW'); }} onMouseEnter={handleHover} className={`p-3 rounded-full transition-all ${mode === 'DRAW' ? 'bg-white/10 text-[#00f3ff]' : 'text-white/50 hover:text-white hover:bg-white/5'}`} title="Neon Pen">
             <Palette size={20} />

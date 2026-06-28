@@ -37,3 +37,6 @@
     @apply appearance-none w-4 h-4 rounded-full bg-white cursor-pointer transition-transform hover:scale-125 shadow-[0_0_10px_rgba(255,255,255,0.5)];
   }
 }
+
+.hide-scrollbar::-webkit-scrollbar { display: none; }
+.hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
