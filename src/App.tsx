@@ -550,11 +550,11 @@ function App() {
       {/* Floating Action Dock */}
       <motion.div 
         initial={{ y: 100, opacity: 0, x: '-50%' }} animate={{ y: 0, opacity: 1, x: '-50%' }} transition={{ type: 'spring', bounce: 0.4, duration: 0.8, delay: 0.2 }}
-        className="absolute bottom-3 md:bottom-8 left-1/2 flex flex-col md:flex-row gap-2 md:gap-4 items-center z-20 pointer-events-auto w-[98vw] md:w-[95%] max-w-full justify-center px-1 md:px-0"
+        className="absolute bottom-6 md:bottom-8 left-1/2 flex flex-col gap-3 md:gap-4 items-center z-20 pointer-events-auto w-[96vw] md:w-[95%] max-w-full justify-center px-2 md:px-0"
       >
         
         {/* Colors */}
-        <div className="bg-[#1a1a1e]/80 backdrop-blur-2xl border border-white/10 rounded-full px-5 py-3 flex items-center gap-3 shadow-[0_20px_40px_rgba(0,0,0,0.4)] overflow-x-auto hide-scrollbar max-w-full w-full md:w-auto shrink-0">
+        <div className="bg-[#1a1a1e]/80 backdrop-blur-2xl border border-white/10 rounded-3xl md:rounded-full px-5 py-3 flex flex-wrap justify-center items-center gap-3 shadow-[0_20px_40px_rgba(0,0,0,0.4)] max-w-full w-full md:w-auto shrink-0">
           {COLORS.map(c => (
             <button 
               key={c}
@@ -567,7 +567,7 @@ function App() {
         </div>
 
         {/* Tools Dock */}
-        <div className="bg-[#1a1a1e]/80 backdrop-blur-2xl border border-white/10 rounded-full px-3 py-3 flex items-center gap-1 shadow-[0_20px_40px_rgba(0,0,0,0.4)] overflow-x-auto hide-scrollbar max-w-full w-full md:w-auto shrink-0">
+        <div className="bg-[#1a1a1e]/80 backdrop-blur-2xl border border-white/10 rounded-3xl md:rounded-full px-4 py-3 flex flex-wrap justify-center items-center gap-2 shadow-[0_20px_40px_rgba(0,0,0,0.4)] max-w-full w-full md:w-auto shrink-0">
           {/* Brushes */}
           <button onClick={() => { audio.playClick(); setMode('DRAW'); }} onMouseEnter={handleHover} className={`p-3 rounded-full transition-all ${mode === 'DRAW' ? 'bg-white/10 text-[#00f3ff]' : 'text-white/50 hover:text-white hover:bg-white/5'}`} title="Neon Pen">
             <Palette size={20} />
@@ -588,7 +588,7 @@ function App() {
             <Eraser size={20} />
           </button>
           
-          <div className="w-px h-8 bg-white/10 mx-2"></div>
+          <div className="hidden md:block w-px h-8 bg-white/10 mx-2"></div>
 
           {/* Collapsible Sliders Panel Toggle */}
           <button 
@@ -600,7 +600,7 @@ function App() {
             <SlidersHorizontal size={20} />
           </button>
           
-          <div className="w-px h-8 bg-white/10 mx-2"></div>
+          <div className="hidden md:block w-px h-8 bg-white/10 mx-2"></div>
 
           {/* Symmetry Toggle */}
           <button 
@@ -619,7 +619,7 @@ function App() {
             )}
           </button>
           
-          <div className="w-px h-8 bg-white/10 mx-2"></div>
+          <div className="hidden md:block w-px h-8 bg-white/10 mx-2"></div>
           
           {/* Actions */}
           <button onClick={() => { audio.playClick(); undo(); }} onMouseEnter={handleHover} className="p-3 rounded-full text-white/50 hover:text-white hover:bg-white/5 transition-all" title="Undo (Z)">
@@ -658,7 +658,7 @@ function App() {
             {isAudioEnabled ? <Volume2 size={18} /> : <VolumeX size={18} />}
           </button>
 
-          <div className="w-px h-8 bg-white/10 mx-2"></div>
+          <div className="hidden md:block w-px h-8 bg-white/10 mx-2"></div>
 
           {/* Mode Toggles */}
           <button onClick={() => { audio.playClick(); gameEngine.toggleGameMode(); }} onMouseEnter={handleHover} className={`p-3 rounded-full transition-all ${gameEngine.isGameMode ? 'bg-[#b026ff]/20 text-[#b026ff]' : 'text-white/50 hover:text-[#b026ff] hover:bg-white/5'}`} title="Arcade Mode">
