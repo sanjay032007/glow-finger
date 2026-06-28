@@ -549,10 +549,10 @@ function App() {
 
       {/* Floating Action Dock */}
       <motion.div 
-        initial={{ y: 100, opacity: 0, x: '-50%' }} animate={{ y: 0, opacity: 1, x: '-50%' }} transition={{ type: 'spring', bounce: 0.4, duration: 0.8, delay: 0.2 }}
-        className="absolute bottom-6 md:bottom-8 left-1/2 flex items-center z-20 pointer-events-auto w-[96vw] md:w-[95%] max-w-[900px] justify-center px-1 md:px-0"
+        initial={{ y: 100, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ type: 'spring', bounce: 0.4, duration: 0.8, delay: 0.2 }}
+        className="absolute bottom-8 left-0 right-0 w-full px-4 flex justify-center z-20 pointer-events-none"
       >
-        <div className="bg-[#1a1a1e]/80 backdrop-blur-2xl border border-white/10 rounded-full px-4 py-3 flex items-center gap-2 md:gap-3 shadow-[0_20px_40px_rgba(0,0,0,0.4)] overflow-x-auto hide-scrollbar w-full">
+        <div className="pointer-events-auto bg-[#1a1a1e]/80 backdrop-blur-2xl border border-white/10 rounded-full px-4 py-3 flex items-center gap-3 shadow-[0_20px_40px_rgba(0,0,0,0.4)] overflow-x-auto hide-scrollbar max-w-full w-max">
           
           {/* Colors */}
           {COLORS.map(c => (
