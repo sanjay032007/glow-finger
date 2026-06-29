@@ -168,3 +168,4 @@ export const useHandTracking = (videoRef: React.RefObject<HTMLVideoElement>, can
 
   return { isReady, error, handStateRef, debugInfo, faceLandmarks };
 };
+
