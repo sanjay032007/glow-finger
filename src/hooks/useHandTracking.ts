@@ -55,7 +55,7 @@ export const useHandTracking = (videoRef: React.RefObject<HTMLVideoElement>, can
 
         try {
             hands = new HandsClass({
-                locateFile: (file: string) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
+                locateFile: (file: string) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1675469240/${file}`
             });
 
             const isMobile = window.innerWidth < 768;
@@ -118,7 +118,7 @@ export const useHandTracking = (videoRef: React.RefObject<HTMLVideoElement>, can
             });
 
             faceMesh = new FaceMeshClass({
-                locateFile: (file: string) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`
+                locateFile: (file: string) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4.1633559619/${file}`
             });
             faceMesh.setOptions({
                 maxNumFaces: 1,
