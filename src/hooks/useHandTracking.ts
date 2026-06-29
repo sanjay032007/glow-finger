@@ -162,17 +162,17 @@ export const useHandTracking = (videoRef: React.RefObject<HTMLVideoElement>, can
                         try { 
                             const promises = [];
                             if (hands) {
-                                promises.push(hands.send({ image: videoEl }).catch((err: any) => console.error("Hands send error:", err)));
+                                promises.push(hands.send({ image: videoEl }).catch((err: any) => setError("Hands send error: " + (err && err.message ? err.message : String(err)))));
                             }
                             // Only run faceMesh if we actually have an active AR face filter!
                             if (faceMesh && faceStyleRef.current !== 'NORMAL') {
-                                promises.push(faceMesh.send({ image: videoEl }).catch((err: any) => console.error("FaceMesh send error:", err)));
+                                promises.push(faceMesh.send({ image: videoEl }).catch((err: any) => setError("FaceMesh send error: " + (err && err.message ? err.message : String(err)))));
                             }
                             if (promises.length > 0) {
                                 await Promise.all(promises);
                             }
                         } 
-                        catch(err: any) { console.error("MediaPipe send error:", err); }
+                        catch(err: any) { setError("MediaPipe send error: " + (err && err.message ? err.message : String(err))); }
                         finally { isProcessing = false; }
                     }
                 },
