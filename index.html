@@ -3,8 +3,9 @@
   <head>
     <meta charset="UTF-8" />
     <script>
-      // Global error diagnostics banner
+      // Global error diagnostics banner (Safe from null body)
       window.addEventListener('error', function(e) {
+        var targetNode = document.body || document.documentElement;
         if (e.target && (e.target.tagName === 'SCRIPT' || e.target.tagName === 'LINK')) {
           var div = document.createElement('div');
           div.style.position = 'fixed';
@@ -17,8 +18,8 @@
           div.style.zIndex = '99999';
           div.style.fontFamily = 'monospace';
           div.style.fontSize = '12px';
-          div.innerHTML = '<strong>Resource Load Failure:</strong> Failed to load script/style from: ' + (e.target.src || e.target.href) + '<br>This is usually caused by Brave Shield, AdBlock, or tracking protection blocking MediaPipe CDN. Please disable them.';
-          document.body.appendChild(div);
+          div.innerHTML = '<strong>Resource Load Failure:</strong> Failed to load script/style from: ' + (e.target.src || e.target.href) + '<br>Please check network connection or browser privacy shields.';
+          if (targetNode) targetNode.appendChild(div);
         } else {
           var div = document.createElement('div');
           div.style.position = 'fixed';
@@ -33,10 +34,11 @@
           div.style.fontSize = '12px';
           div.style.wordBreak = 'break-all';
           div.innerHTML = '<strong>Uncaught Error:</strong> ' + e.message + ' at ' + e.filename + ':' + e.lineno;
-          document.body.appendChild(div);
+          if (targetNode) targetNode.appendChild(div);
         }
       }, true);
       window.addEventListener('unhandledrejection', function(e) {
+        var targetNode = document.body || document.documentElement;
         var div = document.createElement('div');
         div.style.position = 'fixed';
         div.style.top = '120px';
@@ -50,20 +52,15 @@
         div.style.fontSize = '12px';
         div.style.wordBreak = 'break-all';
         div.innerHTML = '<strong>Unhandled Rejection:</strong> ' + e.reason;
-        document.body.appendChild(div);
+        if (targetNode) targetNode.appendChild(div);
       });
 
-      // Emscripten Module Sandbox Interceptor (Deep Merge Shared Object)
+      // Emscripten Module Sandbox Interceptor (Deep Merge Shared Object - Host MediaPipe Locally)
       (function() {
         var sharedModule = {
           locateFile: function(file) {
-            if (file.indexOf('hand') !== -1) {
-              return 'https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4/' + file;
-            }
-            if (file.indexOf('face') !== -1) {
-              return 'https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4/' + file;
-            }
-            return file;
+            // Force local resolution for WASM and binary asset files
+            return '/mediapipe/' + file;
           }
         };
         
@@ -101,11 +98,11 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils@0.3/camera_utils.js" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils@0.6/control_utils.js" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils@0.3/drawing_utils.js" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4/hands.js" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4/face_mesh.js" crossorigin="anonymous"></script>
+    <script src="/mediapipe/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="/mediapipe/control_utils.js" crossorigin="anonymous"></script>
+    <script src="/mediapipe/drawing_utils.js" crossorigin="anonymous"></script>
+    <script src="/mediapipe/hands.js" crossorigin="anonymous"></script>
+    <script src="/mediapipe/face_mesh.js" crossorigin="anonymous"></script>
   </head>
   <body>
     <div id="root"></div>
