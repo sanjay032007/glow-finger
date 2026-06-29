@@ -61,7 +61,7 @@ export const useHandTracking = (videoRef: React.RefObject<HTMLVideoElement>, can
 
         try {
             hands = new HandsClass({
-                locateFile: (file: string) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4/${file}`
+                locateFile: (file: string) => `/mediapipe/${file}`
             });
             
             // Save initialized Hands Module and clear global Module
@@ -129,7 +129,7 @@ export const useHandTracking = (videoRef: React.RefObject<HTMLVideoElement>, can
 
             if (FaceMeshClass) {
                 faceMesh = new FaceMeshClass({
-                    locateFile: (file: string) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4/${file}`
+                    locateFile: (file: string) => `/mediapipe/${file}`
                 });
                 
                 // Save initialized FaceMesh Module and clear global Module
