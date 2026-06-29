@@ -169,7 +169,7 @@ export const useHandTracking = (videoRef: React.RefObject<HTMLVideoElement>, can
                                 promises.push(faceMesh.send({ image: videoEl }).catch((err: any) => setError("FaceMesh send error: " + (err && err.message ? err.message : String(err)))));
                             }
                             if (promises.length > 0) {
-                                await Promise.all(promises);
+                                for (const p of promises) { await p; }
                             }
                         } 
                         catch(err: any) { setError("MediaPipe send error: " + (err && err.message ? err.message : String(err))); }
