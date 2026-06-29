@@ -13,9 +13,14 @@ export interface HandState {
   landmarks?: any[];
 }
 
-export const useHandTracking = (videoRef: React.RefObject<HTMLVideoElement>, canvasWidth: number, canvasHeight: number, enabled: boolean) => {
+export const useHandTracking = (videoRef: React.RefObject<HTMLVideoElement>, canvasWidth: number, canvasHeight: number, enabled: boolean, faceStyle: string) => {
   const [isReady, setIsReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  
+  const faceStyleRef = useRef(faceStyle);
+  useEffect(() => {
+    faceStyleRef.current = faceStyle;
+  }, [faceStyle]);
   
   const [debugInfo, setDebugInfo] = useState({ frames: 0, results: 0, gesture: 'NONE', x: 0, y: 0, z: 0 });
   const debugRef = useRef({ frames: 0, results: 0, gesture: 'NONE', x: 0, y: 0, z: 0 });
@@ -47,13 +52,14 @@ export const useHandTracking = (videoRef: React.RefObject<HTMLVideoElement>, can
         const FaceMeshClass = getFaceMeshClass();
         const CameraClass = getCameraClass();
 
-        if (!HandsClass || !FaceMeshClass || !CameraClass) {
-            console.log("Waiting for MediaPipe CDN scripts to load...");
+        // FaceMesh is optional - only HandsClass and CameraClass are required for drawing
+        if (!HandsClass || !CameraClass) {
+            console.log("Waiting for MediaPipe Hands and Camera CDN scripts to load...");
             pollTimeout = setTimeout(initTracking, 500) as any;
             return;
         }
 
-                                try {
+        try {
             hands = new HandsClass({
                 locateFile: (file: string) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4/${file}`
             });
@@ -121,39 +127,52 @@ export const useHandTracking = (videoRef: React.RefObject<HTMLVideoElement>, can
                 }
             });
 
-                                                faceMesh = new FaceMeshClass({
-                locateFile: (file: string) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4/${file}`
-            });
-            
-            // Save initialized FaceMesh Module and clear global Module
-            (window as any).FaceMeshModule = (window as any).Module;
-            (window as any).Module = undefined;
-            faceMesh.setOptions({
-                maxNumFaces: 1,
-                refineLandmarks: true,
-                minDetectionConfidence: 0.5,
-                minTrackingConfidence: 0.5
-            });
-            faceMesh.onResults((results: any) => {
-                if (results.multiFaceLandmarks && results.multiFaceLandmarks.length > 0) {
-                    setFaceLandmarks(results.multiFaceLandmarks[0]);
-                } else {
-                    setFaceLandmarks(null);
-                }
-            });
+            if (FaceMeshClass) {
+                faceMesh = new FaceMeshClass({
+                    locateFile: (file: string) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4/${file}`
+                });
+                
+                // Save initialized FaceMesh Module and clear global Module
+                (window as any).FaceMeshModule = (window as any).Module;
+                (window as any).Module = undefined;
+                faceMesh.setOptions({
+                    maxNumFaces: 1,
+                    refineLandmarks: true,
+                    minDetectionConfidence: 0.5,
+                    minTrackingConfidence: 0.5
+                });
+                faceMesh.onResults((results: any) => {
+                    if (results.multiFaceLandmarks && results.multiFaceLandmarks.length > 0) {
+                        setFaceLandmarks(results.multiFaceLandmarks[0]);
+                    } else {
+                        setFaceLandmarks(null);
+                    }
+                });
+            } else {
+                console.warn("FaceMesh CDN script not loaded. Face AR features will be disabled.");
+            }
 
             let isProcessing = false;
             camera = new CameraClass(videoRef.current, {
                 onFrame: async () => { 
                     debugRef.current.frames++;
                     if (isProcessing) return;
-                    if (videoRef.current && hands && faceMesh) {
+                    const videoEl = videoRef.current;
+                    // Ensure the video is playing and has valid dimensions before feeding to AI
+                    if (videoEl && videoEl.readyState >= 2 && videoEl.videoWidth > 0) {
                         isProcessing = true;
                         try { 
-                            await Promise.all([
-                                hands.send({ image: videoRef.current }).catch((err: any) => console.error("Hands send error:", err)),
-                                faceMesh.send({ image: videoRef.current }).catch((err: any) => console.error("FaceMesh send error:", err))
-                            ]);
+                            const promises = [];
+                            if (hands) {
+                                promises.push(hands.send({ image: videoEl }).catch((err: any) => console.error("Hands send error:", err)));
+                            }
+                            // Only run faceMesh if we actually have an active AR face filter!
+                            if (faceMesh && faceStyleRef.current !== 'NORMAL') {
+                                promises.push(faceMesh.send({ image: videoEl }).catch((err: any) => console.error("FaceMesh send error:", err)));
+                            }
+                            if (promises.length > 0) {
+                                await Promise.all(promises);
+                            }
                         } 
                         catch(err: any) { console.error("MediaPipe send error:", err); }
                         finally { isProcessing = false; }

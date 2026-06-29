@@ -108,7 +108,7 @@ function App() {
     });
   };
 
-  const { isReady, error, handStateRef, debugInfo, faceLandmarks } = useHandTracking(videoRef, dimensions.width, dimensions.height, isLaunched);
+  const { isReady, error, handStateRef, debugInfo, faceLandmarks } = useHandTracking(videoRef, dimensions.width, dimensions.height, isLaunched, faceStyle);
   const gameEngine = useGameEngine();
   const { clearCanvas, saveToGallery, undo } = useSmoothDrawing(canvasRef, handStateRef, { color, size, glow, mode, symmetry }, gameEngine, videoRef, showPreview);
 
