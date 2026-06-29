@@ -55,7 +55,7 @@ export const useHandTracking = (videoRef: React.RefObject<HTMLVideoElement>, can
 
         try {
             hands = new HandsClass({
-                locateFile: (file: string) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1675469240/${file}`
+                locateFile: (file: string) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4/${file}`
             });
 
             const isMobile = window.innerWidth < 768;
@@ -118,7 +118,7 @@ export const useHandTracking = (videoRef: React.RefObject<HTMLVideoElement>, can
             });
 
             faceMesh = new FaceMeshClass({
-                locateFile: (file: string) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4.1633559619/${file}`
+                locateFile: (file: string) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4/${file}`
             });
             faceMesh.setOptions({
                 maxNumFaces: 1,
@@ -143,8 +143,8 @@ export const useHandTracking = (videoRef: React.RefObject<HTMLVideoElement>, can
                         isProcessing = true;
                         try { 
                             await Promise.all([
-                                hands.send({ image: videoRef.current }),
-                                faceMesh.send({ image: videoRef.current })
+                                hands.send({ image: videoRef.current }).catch((err: any) => console.error("Hands send error:", err)),
+                                faceMesh.send({ image: videoRef.current }).catch((err: any) => console.error("FaceMesh send error:", err))
                             ]);
                         } 
                         catch(err: any) { console.error("MediaPipe send error:", err); }

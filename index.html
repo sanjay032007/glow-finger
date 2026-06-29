@@ -2,6 +2,58 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
+    <script>
+      // Global error diagnostics banner
+      window.addEventListener('error', function(e) {
+        if (e.target && (e.target.tagName === 'SCRIPT' || e.target.tagName === 'LINK')) {
+          var div = document.createElement('div');
+          div.style.position = 'fixed';
+          div.style.top = '0';
+          div.style.left = '0';
+          div.style.width = '100%';
+          div.style.background = 'rgba(255, 0, 0, 0.95)';
+          div.style.color = 'white';
+          div.style.padding = '15px';
+          div.style.zIndex = '99999';
+          div.style.fontFamily = 'monospace';
+          div.style.fontSize = '12px';
+          div.innerHTML = '<strong>Resource Load Failure:</strong> Failed to load script/style from: ' + (e.target.src || e.target.href) + '<br>This is usually caused by Brave Shield, AdBlock, or tracking protection blocking MediaPipe CDN. Please disable them.';
+          document.body.appendChild(div);
+        } else {
+          var div = document.createElement('div');
+          div.style.position = 'fixed';
+          div.style.top = '60px';
+          div.style.left = '0';
+          div.style.width = '100%';
+          div.style.background = 'rgba(255, 0, 0, 0.9)';
+          div.style.color = 'white';
+          div.style.padding = '15px';
+          div.style.zIndex = '99999';
+          div.style.fontFamily = 'monospace';
+          div.style.fontSize = '12px';
+          div.style.wordBreak = 'break-all';
+          div.innerHTML = '<strong>Uncaught Error:</strong> ' + e.message + ' at ' + e.filename + ':' + e.lineno;
+          document.body.appendChild(div);
+        }
+      }, true);
+      window.addEventListener('unhandledrejection', function(e) {
+        var div = document.createElement('div');
+        div.style.position = 'fixed';
+        div.style.top = '120px';
+        div.style.left = '0';
+        div.style.width = '100%';
+        div.style.background = 'rgba(255, 68, 68, 0.9)';
+        div.style.color = 'white';
+        div.style.padding = '15px';
+        div.style.zIndex = '99999';
+        div.style.fontFamily = 'monospace';
+        div.style.fontSize = '12px';
+        div.style.wordBreak = 'break-all';
+        div.innerHTML = '<strong>Unhandled Rejection:</strong> ' + e.reason;
+        document.body.appendChild(div);
+      });
+    </script>
+    <meta charset="UTF-8" />
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
     <meta http-equiv="Pragma" content="no-cache" />
     <meta http-equiv="Expires" content="0" />
@@ -13,11 +65,11 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils@0.3.1675466862/camera_utils.js" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils@0.6.1629159505/control_utils.js" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils@0.3.1675466124/drawing_utils.js" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1675469240/hands.js" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4.1633559619/face_mesh.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils@0.3/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils@0.6/control_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils@0.3/drawing_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4/hands.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4/face_mesh.js" crossorigin="anonymous"></script>
   </head>
   <body>
     <div id="root"></div>
