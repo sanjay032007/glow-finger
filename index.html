@@ -55,38 +55,7 @@
         if (targetNode) targetNode.appendChild(div);
       });
 
-      // Emscripten Module Sandbox Interceptor (Deep Merge Shared Object - Host MediaPipe Locally)
-      (function() {
-        var sharedModule = {
-          locateFile: function(file) {
-            // Force local resolution for WASM and binary asset files
-            return '/mediapipe/' + file;
-          }
-        };
-        
-        Object.defineProperty(window, 'Module', {
-          get: function() {
-            return sharedModule;
-          },
-          set: function(val) {
-            if (val && typeof val === 'object') {
-              for (var key in val) {
-                if (val.hasOwnProperty(key)) {
-                  if (key === 'locateFile') continue;
-                  
-                  if (sharedModule[key] && typeof sharedModule[key] === 'object' && typeof val[key] === 'object') {
-                    Object.assign(sharedModule[key], val[key]);
-                  } else {
-                    sharedModule[key] = val[key];
-                  }
-                }
-              }
-            }
-          },
-          configurable: true
-        });
-      })();
-    </script>
+          </script>
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
     <meta http-equiv="Pragma" content="no-cache" />
     <meta http-equiv="Expires" content="0" />

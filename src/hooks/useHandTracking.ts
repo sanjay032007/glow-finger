@@ -65,8 +65,7 @@ export const useHandTracking = (videoRef: React.RefObject<HTMLVideoElement>, can
             });
             
             // Save initialized Hands Module and clear global Module
-            (window as any).HandsModule = (window as any).Module;
-            (window as any).Module = undefined;
+            
 
             const isMobile = window.innerWidth < 768;
             hands.setOptions({
@@ -133,8 +132,7 @@ export const useHandTracking = (videoRef: React.RefObject<HTMLVideoElement>, can
                 });
                 
                 // Save initialized FaceMesh Module and clear global Module
-                (window as any).FaceMeshModule = (window as any).Module;
-                (window as any).Module = undefined;
+                
                 faceMesh.setOptions({
                     maxNumFaces: 1,
                     refineLandmarks: true,
