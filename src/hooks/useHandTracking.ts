@@ -53,10 +53,7 @@ export const useHandTracking = (videoRef: React.RefObject<HTMLVideoElement>, can
             return;
         }
 
-                        try {
-            // Restore Hands Module context to prevent collision with FaceMesh Module
-            (window as any)._activeModule = (window as any).HandsModule;
-            
+                                try {
             hands = new HandsClass({
                 locateFile: (file: string) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4/${file}`
             });
@@ -124,10 +121,7 @@ export const useHandTracking = (videoRef: React.RefObject<HTMLVideoElement>, can
                 }
             });
 
-                                    // Restore FaceMesh Module context
-            (window as any)._activeModule = (window as any).FaceMeshModule;
-            
-            faceMesh = new FaceMeshClass({
+                                                faceMesh = new FaceMeshClass({
                 locateFile: (file: string) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4/${file}`
             });
             
