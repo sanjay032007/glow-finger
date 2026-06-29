@@ -54,9 +54,16 @@ export const useHandTracking = (videoRef: React.RefObject<HTMLVideoElement>, can
         }
 
         try {
+            // Restore Hands Module context to prevent collision with FaceMesh Module
+            (window as any).Module = (window as any).HandsModule;
+            
             hands = new HandsClass({
                 locateFile: (file: string) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4/${file}`
             });
+            
+            // Save initialized Hands Module and clear global Module
+            (window as any).HandsModule = (window as any).Module;
+            (window as any).Module = undefined;
 
             const isMobile = window.innerWidth < 768;
             hands.setOptions({
@@ -117,9 +124,16 @@ export const useHandTracking = (videoRef: React.RefObject<HTMLVideoElement>, can
                 }
             });
 
+            // Restore FaceMesh Module context
+            (window as any).Module = (window as any).FaceMeshModule;
+            
             faceMesh = new FaceMeshClass({
                 locateFile: (file: string) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4/${file}`
             });
+            
+            // Save initialized FaceMesh Module and clear global Module
+            (window as any).FaceMeshModule = (window as any).Module;
+            (window as any).Module = undefined;
             faceMesh.setOptions({
                 maxNumFaces: 1,
                 refineLandmarks: true,
