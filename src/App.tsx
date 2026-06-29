@@ -19,11 +19,8 @@ import { audio } from './utils/audio';
 import { 
   Palette, Eraser, Camera, Trash2, Undo, Video, Bug, 
   Sparkles as SparklesIcon, Gamepad2, Trophy, Flame, Play, X, 
-  Volume2, VolumeX, Zap, Rainbow, FolderHeart, Repeat, SlidersHorizontal, Share2, Image as ImageIcon, Sparkles
+  Volume2, VolumeX, Zap, Rainbow, FolderHeart, Repeat, SlidersHorizontal, Share2, Image as ImageIcon
 } from 'lucide-react';
-import { CameraFilters } from './components/CameraFilters';
-import type { FaceStyle } from './components/CameraFilters';
-import { FaceARCanvas } from './components/FaceARCanvas';
 
 const COLORS = ['#00f3ff', '#b026ff', '#ff007f', '#39ff14', '#ff8c00', '#ffffff'];
 
@@ -48,10 +45,7 @@ function App() {
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [isFlashing, setIsFlashing] = useState(false);
   
-  const [faceStyle, setFaceStyle] = useState<FaceStyle>('NORMAL');
-  const lastGestureRef = useRef<string>('NONE');
-  const [showStyleToast, setShowStyleToast] = useState(false);
-  
+        
   const [isRecording, setIsRecording] = useState(false);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const recordedChunksRef = useRef<BlobPart[]>([]);
@@ -108,36 +102,9 @@ function App() {
     });
   };
 
-  const { isReady, error, handStateRef, debugInfo, faceLandmarks } = useHandTracking(videoRef, dimensions.width, dimensions.height, isLaunched, faceStyle);
+  const { isReady, error, handStateRef, debugInfo } = useHandTracking(videoRef, dimensions.width, dimensions.height, isLaunched);
   const gameEngine = useGameEngine();
   const { clearCanvas, saveToGallery, undo } = useSmoothDrawing(canvasRef, handStateRef, { color, size, glow, mode, symmetry }, gameEngine, videoRef, showPreview);
-
-  // Cycle face style on gestures
-  useEffect(() => {
-    if (debugInfo.gesture !== lastGestureRef.current) {
-      if (debugInfo.gesture === 'PEACE') {
-        audio.playHover();
-        setFaceStyle('NEON');
-        setShowStyleToast(true);
-      } else if (debugInfo.gesture === 'ROCK') {
-        audio.playHover();
-        setFaceStyle('POP_ART');
-        setShowStyleToast(true);
-      } else if (debugInfo.gesture === 'THUMBS_UP') {
-        audio.playHover();
-        setFaceStyle('ANIME');
-        setShowStyleToast(true);
-      } else if (debugInfo.gesture === 'ERASE') {
-        setFaceStyle('NORMAL');
-      }
-      
-      if (showStyleToast) {
-        const timer = setTimeout(() => setShowStyleToast(false), 2000);
-        return () => clearTimeout(timer);
-      }
-    }
-    lastGestureRef.current = debugInfo.gesture;
-  }, [debugInfo.gesture]);
 
   const handleSaveToGallery = () => {
     setIsFlashing(true);
@@ -361,13 +328,12 @@ function App() {
       className="relative w-full h-[100dvh] bg-[#050505] overflow-hidden"
       onClick={() => setShowColorPicker(false)}
     >
-      <CameraFilters />
+      
       <Onboarding handStateRef={handStateRef} />
       <FPSIndicator />
       
-      <CameraView videoRef={videoRef} showPreview={showPreview} faceStyle={faceStyle} />
-      {faceLandmarks && <FaceARCanvas faceLandmarks={faceLandmarks} faceStyle={faceStyle} width={dimensions.width} height={dimensions.height} />}
-      <DrawingCanvas canvasRef={canvasRef} width={dimensions.width} height={dimensions.height} />
+      <CameraView videoRef={videoRef} showPreview={showPreview} />
+            <DrawingCanvas canvasRef={canvasRef} width={dimensions.width} height={dimensions.height} />
       
       {/* Real-time Gesture Feedback Badge */}
       {!gameEngine.isGameMode && (
@@ -420,23 +386,7 @@ function App() {
         </div>
       )}
 
-      {/* Face Style Toast */}
-      <AnimatePresence>
-        {showStyleToast && (
-          <motion.div
-            initial={{ y: 20, opacity: 0, x: '-50%' }}
-            animate={{ y: 0, opacity: 1, x: '-50%' }}
-            exit={{ y: 20, opacity: 0, x: '-50%' }}
-            className="absolute bottom-32 left-1/2 z-40 pointer-events-none"
-          >
-            <div className="bg-white text-black font-extrabold px-6 py-3 rounded-2xl shadow-[0_0_40px_rgba(255,255,255,0.4)] flex items-center gap-3">
-              <Sparkles size={20} className="text-[#b026ff]" />
-              <span className="uppercase tracking-widest text-sm">STYLE: {faceStyle}</span>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
+      
       {/* Top HUD Bar for Game Mode */}
       <AnimatePresence>
         {gameEngine.isGameMode && (

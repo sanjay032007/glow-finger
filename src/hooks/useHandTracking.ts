@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { getHandGesture, type GestureType } from '../utils/gestureDetection';
 
 const getHandsClass = () => (window as any).Hands;
-const getFaceMeshClass = () => (window as any).FaceMesh;
+
 const getCameraClass = () => (window as any).Camera;
 
 interface Point { x: number; y: number; z: number; }
@@ -13,20 +13,15 @@ export interface HandState {
   landmarks?: any[];
 }
 
-export const useHandTracking = (videoRef: React.RefObject<HTMLVideoElement>, canvasWidth: number, canvasHeight: number, enabled: boolean, faceStyle: string) => {
+export const useHandTracking = (videoRef: React.RefObject<HTMLVideoElement>, canvasWidth: number, canvasHeight: number, enabled: boolean) => {
   const [isReady, setIsReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  
-  const faceStyleRef = useRef(faceStyle);
-  useEffect(() => {
-    faceStyleRef.current = faceStyle;
-  }, [faceStyle]);
   
   const [debugInfo, setDebugInfo] = useState({ frames: 0, results: 0, gesture: 'NONE', x: 0, y: 0, z: 0 });
   const debugRef = useRef({ frames: 0, results: 0, gesture: 'NONE', x: 0, y: 0, z: 0 });
   
   const handStateRef = useRef<HandState>({ position: null, gesture: 'NONE' });
-  const [faceLandmarks, setFaceLandmarks] = useState<any[] | null>(null);
+  
 
   const dimensionsRef = useRef({ width: canvasWidth, height: canvasHeight });
   useEffect(() => {
@@ -44,15 +39,14 @@ export const useHandTracking = (videoRef: React.RefObject<HTMLVideoElement>, can
     
     let camera: any = null;
     let hands: any = null;
-    let faceMesh: any = null;
+    
     let pollTimeout: number;
 
     const initTracking = () => {
         const HandsClass = getHandsClass();
-        const FaceMeshClass = getFaceMeshClass();
+        
         const CameraClass = getCameraClass();
 
-        // FaceMesh is optional - only HandsClass and CameraClass are required for drawing
         if (!HandsClass || !CameraClass) {
             console.log("Waiting for MediaPipe Hands and Camera CDN scripts to load...");
             pollTimeout = setTimeout(initTracking, 500) as any;
@@ -61,7 +55,7 @@ export const useHandTracking = (videoRef: React.RefObject<HTMLVideoElement>, can
 
         try {
             hands = new HandsClass({
-                locateFile: (file: string) => `/mediapipe/${file}`
+                locateFile: (file: string) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
             });
             
             // Save initialized Hands Module and clear global Module
@@ -126,30 +120,6 @@ export const useHandTracking = (videoRef: React.RefObject<HTMLVideoElement>, can
                 }
             });
 
-            if (FaceMeshClass) {
-                faceMesh = new FaceMeshClass({
-                    locateFile: (file: string) => `/mediapipe/${file}`
-                });
-                
-                // Save initialized FaceMesh Module and clear global Module
-                
-                faceMesh.setOptions({
-                    maxNumFaces: 1,
-                    refineLandmarks: true,
-                    minDetectionConfidence: 0.5,
-                    minTrackingConfidence: 0.5
-                });
-                faceMesh.onResults((results: any) => {
-                    if (results.multiFaceLandmarks && results.multiFaceLandmarks.length > 0) {
-                        setFaceLandmarks(results.multiFaceLandmarks[0]);
-                    } else {
-                        setFaceLandmarks(null);
-                    }
-                });
-            } else {
-                console.warn("FaceMesh CDN script not loaded. Face AR features will be disabled.");
-            }
-
             let isProcessing = false;
             camera = new CameraClass(videoRef.current, {
                 onFrame: async () => { 
@@ -165,9 +135,6 @@ export const useHandTracking = (videoRef: React.RefObject<HTMLVideoElement>, can
                                 promises.push(hands.send({ image: videoEl }).catch((err: any) => setError("Hands send error: " + (err && err.message ? err.message : String(err)))));
                             }
                             // Only run faceMesh if we actually have an active AR face filter!
-                            if (faceMesh && faceStyleRef.current !== 'NORMAL') {
-                                promises.push(faceMesh.send({ image: videoEl }).catch((err: any) => setError("FaceMesh send error: " + (err && err.message ? err.message : String(err)))));
-                            }
                             if (promises.length > 0) {
                                 for (const p of promises) { await p; }
                             }
@@ -191,10 +158,10 @@ export const useHandTracking = (videoRef: React.RefObject<HTMLVideoElement>, can
         clearTimeout(pollTimeout);
         if (camera) camera.stop(); 
         if (hands) hands.close(); 
-        if (faceMesh) faceMesh.close();
+        
     };
   }, [videoRef, enabled]);
 
-  return { isReady, error, handStateRef, debugInfo, faceLandmarks };
+  return { isReady, error, handStateRef, debugInfo };
 };
 
