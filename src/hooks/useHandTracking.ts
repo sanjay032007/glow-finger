@@ -134,10 +134,13 @@ export const useHandTracking = (videoRef: React.RefObject<HTMLVideoElement>, can
                 }
             });
 
+            let isProcessing = false;
             camera = new CameraClass(videoRef.current, {
                 onFrame: async () => { 
                     debugRef.current.frames++;
+                    if (isProcessing) return;
                     if (videoRef.current && hands && faceMesh) {
+                        isProcessing = true;
                         try { 
                             await Promise.all([
                                 hands.send({ image: videoRef.current }),
@@ -145,6 +148,7 @@ export const useHandTracking = (videoRef: React.RefObject<HTMLVideoElement>, can
                             ]);
                         } 
                         catch(err: any) { console.error("MediaPipe send error:", err); }
+                        finally { isProcessing = false; }
                     }
                 },
                 width: isMobile ? 640 : 1280, 

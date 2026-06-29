@@ -549,6 +549,34 @@ function App() {
         )}
       </AnimatePresence>
 
+      {/* Collapsible Colors Panel */}
+      <AnimatePresence>
+        {showColorPicker && (
+          <motion.div 
+            initial={{ y: 20, opacity: 0, x: '-50%' }} 
+            animate={{ y: 0, opacity: 1, x: '-50%' }} 
+            exit={{ y: 20, opacity: 0, x: '-50%' }}
+            className="absolute bottom-28 left-1/2 bg-[#1a1a1e]/90 backdrop-blur-2xl border border-white/10 rounded-3xl p-4 flex gap-3 shadow-[0_20px_50px_rgba(0,0,0,0.6)] z-30"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {COLORS.map(c => (
+              <button
+                key={c}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  audio.playClick();
+                  setColor(c);
+                  if (mode === 'ERASE') setMode('DRAW');
+                  setShowColorPicker(false);
+                }}
+                className={`shrink-0 w-8 h-8 rounded-full transition-all duration-200 hover:scale-115 ${color === c && mode !== 'ERASE' ? 'ring-2 ring-white scale-105' : 'opacity-70 hover:opacity-100'}`}
+                style={{ backgroundColor: c }}
+              />
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Floating Action Dock */}
       <motion.div 
         initial={{ y: 100, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ type: 'spring', bounce: 0.4, duration: 0.8, delay: 0.2 }}
@@ -562,9 +590,11 @@ function App() {
           {/* Colors */}
           <div className="flex items-center gap-2 shrink-0">
             <button
-              onClick={() => {
+              onClick={(e) => {
+                e.stopPropagation();
                 audio.playClick();
                 setShowColorPicker(!showColorPicker);
+                setShowSliders(false);
               }}
               onMouseEnter={handleHover}
               className={`shrink-0 w-8 h-8 rounded-full transition-all duration-300 ring-2 ring-white/50 hover:ring-white ${showColorPicker ? 'scale-110' : 'hover:scale-110'}`}
@@ -574,31 +604,6 @@ function App() {
               }}
               title="Change Color"
             />
-
-            <AnimatePresence>
-              {showColorPicker && (
-                <motion.div
-                  initial={{ width: 0, opacity: 0 }}
-                  animate={{ width: 'auto', opacity: 1 }}
-                  exit={{ width: 0, opacity: 0 }}
-                  className="flex items-center gap-2 overflow-hidden pr-1"
-                >
-                  {COLORS.map(c => (
-                    <button
-                      key={c}
-                      onClick={() => {
-                        audio.playClick();
-                        setColor(c);
-                        if (mode === 'ERASE') setMode('DRAW');
-                        setShowColorPicker(false);
-                      }}
-                      className={`shrink-0 w-7 h-7 rounded-full transition-all duration-200 hover:scale-115 ${color === c && mode !== 'ERASE' ? 'ring-2 ring-white scale-105' : 'opacity-70 hover:opacity-100'}`}
-                      style={{ backgroundColor: c }}
-                    />
-                  ))}
-                </motion.div>
-              )}
-            </AnimatePresence>
           </div>
 
           <div className="shrink-0 w-px h-8 bg-white/10 mx-1 md:mx-2"></div>
@@ -627,7 +632,7 @@ function App() {
 
           {/* Collapsible Sliders Panel Toggle */}
           <button 
-            onClick={() => { audio.playClick(); setShowSliders(!showSliders); }} 
+            onClick={(e) => { e.stopPropagation(); audio.playClick(); setShowSliders(!showSliders); setShowColorPicker(false); }} 
             onMouseEnter={handleHover} 
             className={`p-3 rounded-full transition-all ${showSliders ? 'bg-white/10 text-[#00f3ff]' : 'text-white/50 hover:text-white hover:bg-white/5'}`} 
             title="Brush Size & Glow"
