@@ -23,12 +23,12 @@ export function getHandGesture(landmarks: any[]): 'NONE' | 'DRAW' | 'ERASE' | 'P
     }
 
     // PEACE: index and middle up, others down
-    if (indexIsUp && middleIsUp && !ringIsUp && !pinkyIsUp && !thumbIsUp) {
+    if (indexIsUp && middleIsUp && !ringIsUp && !pinkyIsUp) {
         return 'PEACE';
     }
 
     // ROCK: index and pinky up, middle and ring down
-    if (indexIsUp && pinkyIsUp && !middleIsUp && !ringIsUp && !thumbIsUp) {
+    if (indexIsUp && pinkyIsUp && !middleIsUp && !ringIsUp) {
         return 'ROCK';
     }
 
