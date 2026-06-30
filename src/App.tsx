@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Canvas } from '@react-three/fiber';
 import { EffectComposer, Bloom } from '@react-three/postprocessing';
 import { CameraView } from './components/CameraView';
+import { CameraFilters, type CameraFilter } from './components/CameraFilters';
 import { DrawingCanvas } from './components/DrawingCanvas';
 import { Hand3D } from './components/Hand3D';
 import { MiniDrawCanvas } from './components/MiniDrawCanvas';
@@ -44,6 +45,9 @@ function App() {
   const [showSliders, setShowSliders] = useState(false);
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [isFlashing, setIsFlashing] = useState(false);
+  const [cameraFilter, setCameraFilter] = useState<CameraFilter>('NORMAL');
+  const [showFilterToast, setShowFilterToast] = useState(false);
+  const lastGestureRef = useRef<string | null>(null);
   
         
   const [isRecording, setIsRecording] = useState(false);
@@ -105,6 +109,25 @@ function App() {
   const { isReady, error, handStateRef, debugInfo } = useHandTracking(videoRef, dimensions.width, dimensions.height, isLaunched);
   const gameEngine = useGameEngine();
   const { clearCanvas, saveToGallery, undo } = useSmoothDrawing(canvasRef, handStateRef, { color, size, glow, mode, symmetry }, gameEngine, videoRef, showPreview);
+
+  
+  // Cycle camera filter on gestures
+  useEffect(() => {
+    if (!debugInfo.gesture) return;
+    
+    if (debugInfo.gesture === 'PEACE' && lastGestureRef.current !== 'PEACE') {
+      const filters: CameraFilter[] = ['NORMAL', 'NEON', 'POP_ART', 'ANIME', 'VAN_GOGH', 'PAPER'];
+      setCameraFilter(prev => {
+        const nextIndex = (filters.indexOf(prev) + 1) % filters.length;
+        return filters[nextIndex];
+      });
+      setShowFilterToast(true);
+      audio.playHover();
+      setTimeout(() => setShowFilterToast(false), 2000);
+    }
+    
+    lastGestureRef.current = debugInfo.gesture;
+  }, [debugInfo.gesture]);
 
   const handleSaveToGallery = () => {
     setIsFlashing(true);
@@ -330,9 +353,22 @@ function App() {
     >
       
       <Onboarding handStateRef={handStateRef} />
+      <AnimatePresence>
+        {showFilterToast && (
+          <motion.div
+            initial={{ opacity: 0, y: -20, x: '-50%' }}
+            animate={{ opacity: 1, y: 0, x: '-50%' }}
+            exit={{ opacity: 0, y: -20, x: '-50%' }}
+            className="absolute top-24 left-1/2 z-50 bg-[#b026ff]/90 text-white font-bold px-6 py-2 rounded-full shadow-[0_0_20px_rgba(176,38,255,0.6)] backdrop-blur-md pointer-events-none"
+          >
+            Filter Changed: {cameraFilter}
+          </motion.div>
+        )}
+      </AnimatePresence>
       <FPSIndicator />
       
-      <CameraView videoRef={videoRef} showPreview={showPreview} />
+      <CameraFilters />
+      <CameraView videoRef={videoRef} showPreview={showPreview} cameraFilter={cameraFilter} />
             <DrawingCanvas canvasRef={canvasRef} width={dimensions.width} height={dimensions.height} />
       
       {/* Real-time Gesture Feedback Badge */}
