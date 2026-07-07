@@ -13,7 +13,7 @@ interface Particle {
   maxLife: number;
 }
 
-export function Hand3D() {
+export function Hand3D({ isMobile }: { isMobile: boolean }) {
   const { scene } = useGLTF('/right.glb');
   const group = useRef<THREE.Group>(null!);
   const ring1 = useRef<THREE.Mesh>(null!);
@@ -22,9 +22,8 @@ export function Hand3D() {
   
   // Responsive layout from Three.js viewport
   const { viewport } = useThree();
-  const isMobile = viewport.width < 10;
-  const handX = isMobile ? 0 : viewport.width * 0.18;
-  const handY = isMobile ? -1.0 : -0.5;
+  const handX = isMobile ? 0 : viewport.width * 0.38;
+  const handY = isMobile ? -1.0 : -1.3; // lower position to align lowest point with "Bare Hands"
 
   // Clone the scene for the wireframe grid overlay
   const wireframeScene = useMemo(() => scene.clone(), [scene]);
@@ -52,7 +51,7 @@ export function Hand3D() {
   const particlesRef = useRef<Particle[]>([]);
   const nextId = useRef(0);
   const pointsRef = useRef<THREE.Points>(null!);
-  const MAX_PARTICLES = 150;
+  const MAX_PARTICLES = 200;
   
   const particlePositions = useMemo(() => new Float32Array(MAX_PARTICLES * 3), []);
   const particleColors = useMemo(() => new Float32Array(MAX_PARTICLES * 3), []);
@@ -194,39 +193,61 @@ export function Hand3D() {
       mat.color.copy(colorWire);
     });
 
-    // 2. Bone Curling (Pinching / Clicking + subtle idle curling)
-    const idleCurl = Math.sin(t * 1.5) * 0.08; // Gentle finger breathing
+    // 2. Bone Curling + Finger Spreading (Abduction for finger separation)
+    const idleCurl = Math.sin(t * 1.5) * 0.08; 
     const targetPinch = isClickedRef.current ? 1.0 : 0.0;
     pinchFactorRef.current = THREE.MathUtils.lerp(pinchFactorRef.current, targetPinch, 0.15);
     
     const activePinch = pinchFactorRef.current;
     const activeIdle = (1 - pinchFactorRef.current) * idleCurl;
 
-    // Apply curls
+    // Apply curls + dynamic spreading offsets
     bonesRef.current.index.forEach((bone, idx) => {
-      if (idx > 0) bone.rotation.z = -0.6 * activePinch + activeIdle;
+      if (idx > 0) {
+        bone.rotation.z = -0.6 * activePinch + activeIdle;
+      } else {
+        bone.rotation.y = -0.15; // spread index outward left
+      }
     });
 
     bonesRef.current.thumb.forEach((bone, idx) => {
       if (idx > 0) {
         bone.rotation.z = 0.5 * activePinch;
         bone.rotation.y = -0.4 * activePinch;
+      } else {
+        bone.rotation.y = -0.35; // spread thumb out
       }
     });
 
-    [bonesRef.current.middle, bonesRef.current.ring, bonesRef.current.pinky].forEach((finger) => {
-      finger.forEach((bone, idx) => {
-        if (idx > 0) bone.rotation.z = -0.4 * activePinch + activeIdle;
-      });
+    bonesRef.current.middle.forEach((bone, idx) => {
+      if (idx > 0) {
+        bone.rotation.z = -0.4 * activePinch + activeIdle;
+      } else {
+        bone.rotation.y = 0; // middle finger stays center
+      }
     });
 
-    // 3. Hand Positioning & Continuous Rotations
+    bonesRef.current.ring.forEach((bone, idx) => {
+      if (idx > 0) {
+        bone.rotation.z = -0.4 * activePinch + activeIdle;
+      } else {
+        bone.rotation.y = 0.1; // spread ring outward right
+      }
+    });
+
+    bonesRef.current.pinky.forEach((bone, idx) => {
+      if (idx > 0) {
+        bone.rotation.z = -0.4 * activePinch + activeIdle;
+      } else {
+        bone.rotation.y = 0.25; // spread pinky outward right
+      }
+    });
+
+    // 3. Hand Positioning & Natural Wrist Sway (avoid ugly cut-off base rotation)
     if (group.current) {
-      // Rotate fully every 25 seconds + hover reaction + mouse tracking
-      const slowRotate = t * (Math.PI * 2) / 25;
-      group.current.rotation.x = -Math.PI / 2 + (-state.pointer.y * Math.PI) / 10 + Math.sin(t / 2) * 0.05;
-      group.current.rotation.y = Math.PI + slowRotate + (state.pointer.x * Math.PI) / 8;
-      group.current.rotation.z = Math.cos(t / 3) * 0.03;
+      group.current.rotation.x = -Math.PI / 2 + (-state.pointer.y * Math.PI) / 10 + Math.cos(t * 0.15) * 0.1;
+      group.current.rotation.y = Math.PI + Math.sin(t * 0.2) * 0.4 + (state.pointer.x * Math.PI) / 8;
+      group.current.rotation.z = Math.cos(t * 0.25) * 0.03;
     }
 
     // 4. Portal Rings Animations
@@ -239,8 +260,8 @@ export function Hand3D() {
       ring2.current.scale.setScalar(1.25 + Math.cos(t * 1.2) * 0.02);
     }
 
-    // 5. fingertip trails (rendered in world space)
-    if (Math.random() < 0.5) {
+    // 5. Fingertip trails (random size & fall speed + floor ripple interaction)
+    if (Math.random() < 0.6) {
       bonesRef.current.tips.forEach((bone) => {
         const isIndex = bone.name.toLowerCase().includes('index');
         const worldPos = new THREE.Vector3();
@@ -251,30 +272,63 @@ export function Hand3D() {
           particlesRef.current.push({
             id: nextId.current++,
             position: worldPos.clone().add(new THREE.Vector3(
-              (Math.random() - 0.5) * 0.04,
-              (Math.random() - 0.5) * 0.04,
-              (Math.random() - 0.5) * 0.04
+              (Math.random() - 0.5) * 0.06,
+              (Math.random() - 0.5) * 0.06,
+              (Math.random() - 0.5) * 0.06
             )),
+            // Randomize fall speed and scatter velocities
             velocity: new THREE.Vector3(
-              (Math.random() - 0.5) * 0.3,
-              isIndex ? -(Math.random() * 0.4 + 0.2) : Math.random() * 0.3 + 0.1, // index draws back/down, others drift up
-              (Math.random() - 0.5) * 0.3
+              (Math.random() - 0.5) * 0.5,
+              isIndex 
+                ? -(Math.random() * 0.5 + 0.3) 
+                : -(Math.random() * 0.4 + 0.1), // fall downwards towards floor
+              (Math.random() - 0.5) * 0.5
             ),
             color: isIndex ? new THREE.Color('#00f3ff') : colorSolid.clone(),
-            size: isIndex ? Math.random() * 0.18 + 0.08 : Math.random() * 0.08 + 0.04,
+            // Randomize particle sizes
+            size: isIndex 
+              ? Math.random() * 0.22 + 0.1 
+              : Math.random() * 0.12 + 0.04,
             life: 0,
-            maxLife: isIndex ? 1.4 + Math.random() * 0.8 : 0.7 + Math.random() * 0.5,
+            maxLife: 2.0 + Math.random() * 1.0,
           });
         }
       });
     }
 
-    // Update trail particles
+    // Update trail particles & floor ripple physics
+    const newParticles: Particle[] = [];
     particlesRef.current = particlesRef.current.filter((p) => {
       p.life += delta;
       p.position.addScaledVector(p.velocity, delta);
+
+      // Check collision with floor (y = -3.2)
+      if (p.position.y <= -3.2 && p.velocity.y < 0) {
+        // Spawn 8 radial ripple particles moving outward on the X-Z plane
+        for (let i = 0; i < 8; i++) {
+          const angle = (i / 8) * Math.PI * 2;
+          newParticles.push({
+            id: nextId.current++,
+            position: new THREE.Vector3(p.position.x, -3.2, p.position.z),
+            velocity: new THREE.Vector3(
+              Math.cos(angle) * 0.8,
+              0, // stay on the floor
+              Math.sin(angle) * 0.8
+            ),
+            color: p.color.clone(),
+            size: p.size * 0.5,
+            life: 0,
+            maxLife: 0.35 + Math.random() * 0.15,
+          });
+        }
+        return false; // Kill the falling particle
+      }
+
       return p.life < p.maxLife;
     });
+    
+    // Merge ripple particles back
+    particlesRef.current.push(...newParticles);
 
     const positions = pointsRef.current.geometry.attributes.position.array as Float32Array;
     const colors = pointsRef.current.geometry.attributes.color.array as Float32Array;
@@ -323,7 +377,6 @@ export function Hand3D() {
           jPos[count * 3 + 1] = worldPos.y;
           jPos[count * 3 + 2] = worldPos.z;
           
-          // Color corresponding to solid hand color
           jCol[count * 3] = colorWire.r;
           jCol[count * 3 + 1] = colorWire.g;
           jCol[count * 3 + 2] = colorWire.b;
@@ -346,7 +399,7 @@ export function Hand3D() {
       const handPos = new THREE.Vector3();
       group.current.getWorldPosition(handPos);
       lightRef.current.position.copy(handPos);
-      lightRef.current.position.z += 1.5; // position slightly in front of the hand
+      lightRef.current.position.z += 1.5; 
       lightRef.current.color.copy(colorSolid);
     }
   });
@@ -375,7 +428,7 @@ export function Hand3D() {
         </group>
       </Float>
 
-      {/* Fingertip Particle System (rendered in world space) */}
+      {/* Fingertip Particle System */}
       <points ref={pointsRef}>
         <bufferGeometry>
           <bufferAttribute
@@ -397,7 +450,7 @@ export function Hand3D() {
         />
       </points>
 
-      {/* Joint Skeletal Point Cloud (rendered in world space) */}
+      {/* Joint Skeletal Point Cloud */}
       <points ref={jointPointsRef}>
         <bufferGeometry>
           <bufferAttribute
@@ -410,7 +463,7 @@ export function Hand3D() {
           />
         </bufferGeometry>
         <pointsMaterial
-          size={0.55} // Large bright glowing joint nodes
+          size={0.55} 
           map={dotTexture}
           vertexColors
           transparent
@@ -419,7 +472,7 @@ export function Hand3D() {
         />
       </points>
 
-      {/* Hand Dynamic Light (illuminates environment with matching color) */}
+      {/* Hand Dynamic Light */}
       <pointLight
         ref={lightRef}
         intensity={6}

@@ -1,6 +1,6 @@
 import { useRef, useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Canvas } from '@react-three/fiber';
+import { Canvas, useThree } from '@react-three/fiber';
 import { EffectComposer, Bloom, DepthOfField } from '@react-three/postprocessing';
 import { CameraView } from './components/CameraView';
 import { CameraFilters, type CameraFilter } from './components/CameraFilters';
@@ -17,6 +17,8 @@ import { FPSIndicator } from './components/FPSIndicator';
 import { Environments } from './components/Environments';
 import type { EnvMode } from './components/Environments';
 import { audio } from './utils/audio';
+import { TestRunner } from './components/TestRunner';
+import { TestBridge } from './components/TestBridge';
 import { 
   Palette, Eraser, Camera, Trash2, Undo, Video, Bug, 
   Sparkles as SparklesIcon, Gamepad2, Trophy, Flame, Play, X, 
@@ -24,6 +26,20 @@ import {
 } from 'lucide-react';
 
 const COLORS = ['#00f3ff', '#b026ff', '#ff007f', '#39ff14', '#ff8c00', '#ffffff'];
+
+function SceneEffects({ isMobile }: { isMobile: boolean }) {
+  const { viewport } = useThree();
+  if (isMobile) return null;
+  const handX = viewport.width * 0.38;
+  const handY = -0.5;
+  const dofTarget: [number, number, number] = [handX, handY, 0];
+  return (
+    <EffectComposer>
+      <Bloom luminanceThreshold={0.15} luminanceSmoothing={0.9} height={300} intensity={1.5} />
+      <DepthOfField target={dofTarget} focalLength={0.35} bokehScale={3} height={700} />
+    </EffectComposer>
+  );
+}
 
 function App() {
   const [isLaunched, setIsLaunched] = useState(false);
@@ -36,7 +52,6 @@ function App() {
   const [glow, setGlow] = useState(25);
   const [mode, setMode] = useState<DrawMode>('DRAW');
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
-  const dofTarget: [number, number, number] = isMobile ? [0, -1.0, 0] : [3.5, -0.5, 0];
   const [symmetry, setSymmetry] = useState<SymmetryMode>('NONE');
   const [showPreview, setShowPreview] = useState(true);
   const [showDebug, setShowDebug] = useState(false);
@@ -215,17 +230,13 @@ function App() {
         <div className="fixed inset-0 z-0 pointer-events-auto">
           <Canvas camera={{ position: [0, 0, 8], fov: 45 }}>
             <Environments mode={envMode} combo={gameEngine.combo} />
+            <TestBridge />
             
             {/* Interactive 3D Hand */}
-            <Hand3D />
+            <Hand3D isMobile={isMobile} />
 
             {/* Post-Processing Neon Bloom (Disabled on mobile for performance) */}
-            {!isMobile && (
-              <EffectComposer>
-                <Bloom luminanceThreshold={0.15} luminanceSmoothing={0.9} height={300} intensity={1.5} />
-                <DepthOfField target={dofTarget} focalLength={0.35} bokehScale={3} height={700} />
-              </EffectComposer>
-            )}
+            <SceneEffects isMobile={isMobile} />
           </Canvas>
         </div>
 
@@ -277,10 +288,10 @@ function App() {
         {/* Hero Section */}
         <main className="flex-1 w-full max-w-7xl mx-auto px-6 flex flex-col justify-center z-10 py-12 pointer-events-none">
           <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-center w-full">
-            <div className="md:col-span-7 flex flex-col items-center md:items-start text-center md:text-left">
+            <div className="md:col-span-7 flex flex-col items-start text-left">
               <motion.div 
                 initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ duration: 0.5 }}
-                className="inline-flex items-center gap-2 bg-black/40 border border-white/10 backdrop-blur-md rounded-full px-5 py-2 text-xs text-[#00f3ff] font-bold tracking-widest uppercase mb-8 shadow-2xl"
+                className="inline-flex items-center gap-2 bg-black/60 border border-[#00f3ff]/30 backdrop-blur-md rounded-full px-5 py-2 text-xs text-[#00f3ff] font-bold tracking-widest uppercase mb-8 shadow-[0_0_20px_rgba(0,243,255,0.15)] hover:shadow-[0_0_30px_rgba(0,243,255,0.3)] hover:border-[#00f3ff]/50 transition-all duration-300"
               >
                 <span className="relative flex h-2 w-2">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#00f3ff] opacity-75"></span>
@@ -299,22 +310,27 @@ function App() {
               
               <motion.p 
                 initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ duration: 0.7, delay: 0.4 }}
-                className="text-white/70 text-base md:text-lg lg:text-xl max-w-xl mb-12 leading-relaxed font-light drop-shadow-lg"
+                className="text-white/60 text-base md:text-lg lg:text-xl max-w-xl mb-12 leading-relaxed font-light drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]"
               >
                 No apps. No headsets. Just your camera. Experience frictionless augmented reality drawing and gaming directly in your browser.
               </motion.p>
 
-              <motion.button 
+              <motion.div
                 initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ duration: 0.7, delay: 0.6 }}
                 whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
-                onClick={handleLaunch}
-                onMouseEnter={handleHover}
-                className="pointer-events-auto relative group bg-white text-black font-extrabold text-xl px-12 py-6 rounded-3xl overflow-hidden shadow-[0_0_40px_rgba(255,255,255,0.15)] hover:shadow-[0_0_80px_rgba(0,243,255,0.4)] transition-all duration-500 flex items-center gap-4 cursor-pointer"
+                className="pointer-events-auto relative group"
               >
-                <div className="absolute inset-0 bg-gradient-to-r from-[#00f3ff] via-[#b026ff] to-[#ff007f] opacity-0 group-hover:opacity-20 transition-opacity duration-500"></div>
-                <Play className="w-6 h-6 fill-black group-hover:fill-transparent transition-all" />
-                <span>Launch Studio</span>
-              </motion.button>
+                <div className="absolute -inset-1 bg-gradient-to-r from-[#00f3ff] via-[#b026ff] to-[#ff007f] rounded-[26px] blur-xl opacity-35 group-hover:opacity-75 group-hover:blur-2xl transition-all duration-500 z-0"></div>
+                <button 
+                  onClick={handleLaunch}
+                  onMouseEnter={handleHover}
+                  className="relative z-10 group bg-white text-black font-extrabold text-xl px-12 py-6 rounded-3xl overflow-hidden transition-all duration-500 flex items-center gap-4 cursor-pointer"
+                >
+                  <div className="absolute inset-0 bg-gradient-to-r from-[#00f3ff] via-[#b026ff] to-[#ff007f] opacity-0 group-hover:opacity-20 transition-opacity duration-500"></div>
+                  <Play className="w-6 h-6 fill-black group-hover:fill-transparent transition-all" />
+                  <span>Launch Studio</span>
+                </button>
+              </motion.div>
             </div>
             
             {/* Right side is occupied visually by the 3D hand in the Canvas */}
@@ -349,6 +365,7 @@ function App() {
         <footer className="w-full py-8 text-center text-white/30 text-sm font-medium z-10 pointer-events-none">
           <p>Powered by MediaPipe & WebGL &middot; 2026</p>
         </footer>
+        <TestRunner />
       </div>
     );
   }
@@ -854,6 +871,7 @@ function App() {
           </motion.div>
         )}
       </AnimatePresence>
+      <TestRunner />
     </motion.div>
   );
 }

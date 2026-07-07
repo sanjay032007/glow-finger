@@ -19,7 +19,7 @@ export function getHandGesture(landmarks: any[]): 'NONE' | 'DRAW' | 'ERASE' | 'P
 
     // ERASE: open palm (all fingers up)
     if (indexIsUp && middleIsUp && ringIsUp && pinkyIsUp) {
-        return 'ERASE';
+        return 'PAUSE';
     }
 
     // PEACE: index and middle up, others down
