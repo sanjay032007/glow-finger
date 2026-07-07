@@ -22,8 +22,8 @@ export function Hand3D({ isMobile }: { isMobile: boolean }) {
   
   // Responsive layout from Three.js viewport
   const { viewport } = useThree();
-  const handX = isMobile ? 0 : viewport.width * 0.38;
-  const handY = isMobile ? -1.0 : -1.3; // lower position to align lowest point with "Bare Hands"
+  const handX = isMobile ? 0 : viewport.width * 0.26;
+  const handY = isMobile ? -0.8 : -0.7; // Aligned perfectly with center-right desktop viewport
 
   // Clone the scene for the wireframe grid overlay
   const wireframeScene = useMemo(() => scene.clone(), [scene]);
@@ -245,8 +245,9 @@ export function Hand3D({ isMobile }: { isMobile: boolean }) {
 
     // 3. Hand Positioning & Natural Wrist Sway (avoid ugly cut-off base rotation)
     if (group.current) {
-      group.current.rotation.x = -Math.PI / 2 + (-state.pointer.y * Math.PI) / 10 + Math.cos(t * 0.15) * 0.1;
-      group.current.rotation.y = Math.PI + Math.sin(t * 0.2) * 0.4 + (state.pointer.x * Math.PI) / 8;
+      // Natural vertical alignment pointing upwards/facing user
+      group.current.rotation.x = -Math.PI / 6 + (-state.pointer.y * Math.PI) / 10 + Math.cos(t * 0.15) * 0.05;
+      group.current.rotation.y = Math.PI + Math.sin(t * 0.2) * 0.3 + (state.pointer.x * Math.PI) / 8;
       group.current.rotation.z = Math.cos(t * 0.25) * 0.03;
     }
 

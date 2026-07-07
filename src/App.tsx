@@ -288,7 +288,7 @@ function App() {
         {/* Hero Section */}
         <main className="flex-1 w-full max-w-7xl mx-auto px-6 flex flex-col justify-center z-10 py-12 pointer-events-none">
           <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-center w-full">
-            <div className="md:col-span-7 flex flex-col items-start text-left">
+            <div className="md:col-span-7 flex flex-col items-center md:items-start text-center md:text-left">
               <motion.div 
                 initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ duration: 0.5 }}
                 className="inline-flex items-center gap-2 bg-black/60 border border-[#00f3ff]/30 backdrop-blur-md rounded-full px-5 py-2 text-xs text-[#00f3ff] font-bold tracking-widest uppercase mb-8 shadow-[0_0_20px_rgba(0,243,255,0.15)] hover:shadow-[0_0_30px_rgba(0,243,255,0.3)] hover:border-[#00f3ff]/50 transition-all duration-300"
