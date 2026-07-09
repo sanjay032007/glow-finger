@@ -1,6 +1,6 @@
 import { useRef, useEffect, useMemo } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
-import { useGLTF, Float, Center, Torus } from '@react-three/drei';
+import { useGLTF, Float, Center, Torus, ContactShadows } from '@react-three/drei';
 import * as THREE from 'three';
 
 interface Particle {
@@ -412,12 +412,30 @@ export function Hand3D({ isMobile }: { isMobile: boolean }) {
           
           {/* Portal Aura Ring 1 (Inner Cyan) */}
           <Torus ref={ring1} args={[2.0, 0.03, 8, 80]} rotation={[Math.PI / 2, 0, 0]} position={[0, 0, -0.5]}>
-            <meshBasicMaterial color="#00f3ff" transparent opacity={0.4} depthWrite={false} />
+            <meshPhysicalMaterial 
+              color="#00f3ff" 
+              emissive="#00f3ff" 
+              emissiveIntensity={2.5} 
+              transparent 
+              opacity={0.8} 
+              transmission={0.9} 
+              roughness={0.1}
+              thickness={0.5}
+            />
           </Torus>
 
           {/* Portal Aura Ring 2 (Outer Magenta) */}
           <Torus ref={ring2} args={[2.4, 0.02, 8, 80]} rotation={[Math.PI / 2, 0, 0]} position={[0, 0, -0.6]}>
-            <meshBasicMaterial color="#b026ff" transparent opacity={0.3} depthWrite={false} />
+            <meshPhysicalMaterial 
+              color="#b026ff" 
+              emissive="#b026ff" 
+              emissiveIntensity={2.0} 
+              transparent 
+              opacity={0.7} 
+              transmission={0.9} 
+              roughness={0.1}
+              thickness={0.5}
+            />
           </Torus>
 
           <Center>
@@ -472,6 +490,16 @@ export function Hand3D({ isMobile }: { isMobile: boolean }) {
           blending={THREE.AdditiveBlending}
         />
       </points>
+
+      {/* Soft ground contact shadow for anchoring */}
+      <ContactShadows 
+        position={[0, -3.18, 0]} 
+        opacity={0.7} 
+        scale={30} 
+        blur={2.0} 
+        far={4.5} 
+        color="#000000" 
+      />
 
       {/* Hand Dynamic Light */}
       <pointLight

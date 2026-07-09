@@ -10,6 +10,8 @@ import { MiniDrawCanvas } from './components/MiniDrawCanvas';
 import { GallerySection } from './components/GallerySection';
 import { Leaderboard } from './components/Leaderboard';
 import { useHandTracking } from './hooks/useHandTracking';
+import { useFaceTracking } from './hooks/useFaceTracking';
+import { FaceARCanvas } from './components/FaceARCanvas';
 import { useSmoothDrawing, type DrawMode, type SymmetryMode } from './hooks/useSmoothDrawing';
 import { useGameEngine } from './hooks/useGameEngine';
 import { Onboarding } from './components/Onboarding';
@@ -22,7 +24,7 @@ import { TestBridge } from './components/TestBridge';
 import { 
   Palette, Eraser, Camera, Trash2, Undo, Video, Bug, 
   Sparkles as SparklesIcon, Gamepad2, Trophy, Flame, Play, X, 
-  Volume2, VolumeX, Zap, Rainbow, FolderHeart, Repeat, SlidersHorizontal, Share2, Image as ImageIcon
+  Volume2, VolumeX, Zap, Rainbow, FolderHeart, Repeat, SlidersHorizontal, Share2, Image as ImageIcon, User, Hand
 } from 'lucide-react';
 
 const COLORS = ['#00f3ff', '#b026ff', '#ff007f', '#39ff14', '#ff8c00', '#ffffff'];
@@ -57,6 +59,8 @@ function App() {
   const [showDebug, setShowDebug] = useState(false);
   const [isAudioEnabled, setIsAudioEnabled] = useState(false);
   const [envMode, setEnvMode] = useState<EnvMode>('NEON');
+  const [trackingMode, setTrackingMode] = useState<'HANDS'|'FACE'>('HANDS');
+  const [activeMaskIndex, setActiveMaskIndex] = useState(0);
   
   const [showSliders, setShowSliders] = useState(false);
   const [showColorPicker, setShowColorPicker] = useState(false);
@@ -122,7 +126,8 @@ function App() {
     });
   };
 
-  const { isReady, error, handStateRef, debugInfo } = useHandTracking(videoRef, dimensions.width, dimensions.height, isLaunched);
+  const { isReady, error, handStateRef, debugInfo } = useHandTracking(videoRef, dimensions.width, dimensions.height, isLaunched && trackingMode === 'HANDS');
+  const { faceStateRef } = useFaceTracking(videoRef, dimensions.width, dimensions.height, isLaunched && trackingMode === 'FACE');
   const gameEngine = useGameEngine();
   const { clearCanvas, saveToGallery, undo } = useSmoothDrawing(canvasRef, handStateRef, { color, size, glow, mode, symmetry }, gameEngine, videoRef, showPreview);
 
@@ -132,6 +137,13 @@ function App() {
     if (!debugInfo.gesture) return;
     
     if (debugInfo.gesture === 'PEACE' && lastGestureRef.current !== 'PEACE') {
+      if (trackingMode === 'FACE') {
+        setActiveMaskIndex(prev => (prev + 1) % 3);
+        setShowFilterToast(true);
+        audio.playHover();
+        setTimeout(() => setShowFilterToast(false), 2000);
+      } else {
+
       const filters: CameraFilter[] = ['NORMAL', 'NEON', 'POP_ART', 'ANIME', 'VAN_GOGH', 'PAPER'];
       setCameraFilter(prev => {
         const nextIndex = (filters.indexOf(prev) + 1) % filters.length;
@@ -140,6 +152,7 @@ function App() {
       setShowFilterToast(true);
       audio.playHover();
       setTimeout(() => setShowFilterToast(false), 2000);
+      }
     }
     
     lastGestureRef.current = debugInfo.gesture;
@@ -387,7 +400,7 @@ function App() {
             exit={{ opacity: 0, y: -20, x: '-50%' }}
             className="absolute top-24 left-1/2 z-50 bg-[#b026ff]/90 text-white font-bold px-6 py-2 rounded-full shadow-[0_0_20px_rgba(176,38,255,0.6)] backdrop-blur-md pointer-events-none"
           >
-            Filter Changed: {cameraFilter}
+            {trackingMode === 'FACE' ? `Mask Changed: ${['Cyberpunk Visor', 'Holographic HUD', 'Anime Style'][activeMaskIndex]}` : `Filter Changed: ${cameraFilter}`}
           </motion.div>
         )}
       </AnimatePresence>
@@ -396,6 +409,7 @@ function App() {
       <CameraFilters />
       <CameraView videoRef={videoRef} showPreview={showPreview} cameraFilter={cameraFilter} />
             <DrawingCanvas canvasRef={canvasRef} width={dimensions.width} height={dimensions.height} />
+      {trackingMode === 'FACE' && <FaceARCanvas faceStateRef={faceStateRef} activeMaskIndex={activeMaskIndex} />}
       
       {/* Real-time Gesture Feedback Badge */}
       {!gameEngine.isGameMode && (
@@ -449,6 +463,34 @@ function App() {
       )}
 
       
+      {/* Mode Toggle */}
+      <AnimatePresence>
+        {isLaunched && !gameEngine.isGameMode && (
+          <motion.div
+            initial={{ y: -50, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            className="absolute top-8 left-1/2 -translate-x-1/2 z-40 bg-[#131317]/80 backdrop-blur-2xl border border-white/10 rounded-full p-1.5 flex gap-1 transition-all duration-300"
+            style={{
+              boxShadow: `0 20px 40px rgba(0,0,0,0.5), 0 0 20px ${trackingMode === 'HANDS' ? '#00f3ff' : '#ff007f'}1a`,
+              borderColor: `${trackingMode === 'HANDS' ? '#00f3ff' : '#ff007f'}33`
+            }}
+          >
+            <button
+              onClick={() => { setTrackingMode('HANDS'); audio.playClick(); }}
+              className={`flex items-center gap-2 px-6 py-2 rounded-full font-bold text-xs uppercase tracking-widest transition-all ${trackingMode === 'HANDS' ? 'bg-[#00f3ff]/20 text-[#00f3ff] shadow-[0_0_15px_rgba(0,243,255,0.3)] border border-[#00f3ff]/50' : 'text-white/50 hover:bg-white/5 border border-transparent'}`}
+            >
+              <Hand size={16} /> Hands
+            </button>
+            <button
+              onClick={() => { setTrackingMode('FACE'); audio.playClick(); }}
+              className={`flex items-center gap-2 px-6 py-2 rounded-full font-bold text-xs uppercase tracking-widest transition-all ${trackingMode === 'FACE' ? 'bg-[#ff007f]/20 text-[#ff007f] shadow-[0_0_15px_rgba(255,0,127,0.3)] border border-[#ff007f]/50' : 'text-white/50 hover:bg-white/5 border border-transparent'}`}
+            >
+              <User size={16} /> Face AR
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Top HUD Bar for Game Mode */}
       <AnimatePresence>
         {gameEngine.isGameMode && (
@@ -547,7 +589,11 @@ function App() {
             initial={{ y: 20, opacity: 0, x: '-50%' }} 
             animate={{ y: 0, opacity: 1, x: '-50%' }} 
             exit={{ y: 20, opacity: 0, x: '-50%' }}
-            className="absolute bottom-28 left-1/2 bg-[#1a1a1e]/90 backdrop-blur-2xl border border-white/10 rounded-3xl px-6 py-4 flex flex-col gap-4 w-[240px] shadow-[0_20px_50px_rgba(0,0,0,0.6)] z-30"
+            className="absolute bottom-28 left-1/2 bg-[#131317]/90 backdrop-blur-2xl border border-white/10 rounded-3xl px-6 py-4 flex flex-col gap-4 w-[240px] z-30 transition-all duration-300"
+            style={{
+              boxShadow: `0 25px 50px rgba(0,0,0,0.7), 0 0 30px ${color}1e`,
+              borderColor: `${color}33`
+            }}
           >
             <div className="flex items-center gap-3 w-full">
               <span className="text-[10px] text-white/50 font-bold uppercase tracking-widest w-8">Size</span>
@@ -568,7 +614,11 @@ function App() {
             initial={{ y: 20, opacity: 0, x: '-50%' }} 
             animate={{ y: 0, opacity: 1, x: '-50%' }} 
             exit={{ y: 20, opacity: 0, x: '-50%' }}
-            className="absolute bottom-28 left-1/2 bg-[#1a1a1e]/90 backdrop-blur-2xl border border-white/10 rounded-3xl p-4 flex gap-3 shadow-[0_20px_50px_rgba(0,0,0,0.6)] z-30"
+            className="absolute bottom-28 left-1/2 bg-[#131317]/90 backdrop-blur-2xl border border-white/10 rounded-3xl p-4 flex gap-3 z-30 transition-all duration-300"
+            style={{
+              boxShadow: `0 25px 50px rgba(0,0,0,0.7), 0 0 30px ${color}1e`,
+              borderColor: `${color}33`
+            }}
             onClick={(e) => e.stopPropagation()}
           >
             {COLORS.map(c => (
@@ -596,7 +646,11 @@ function App() {
       >
         <div 
           onClick={(e) => e.stopPropagation()}
-          className="pointer-events-auto bg-[#1a1a1e]/80 backdrop-blur-2xl border border-white/10 rounded-full px-4 py-3 flex items-center gap-3 shadow-[0_20px_40px_rgba(0,0,0,0.4)] overflow-x-auto hide-scrollbar max-w-full w-max"
+          className="pointer-events-auto bg-[#131317]/80 backdrop-blur-2xl border border-white/10 rounded-full px-4 py-3 flex items-center gap-3 overflow-x-auto hide-scrollbar max-w-full w-max transition-all duration-300"
+          style={{
+            boxShadow: `0 20px 40px rgba(0,0,0,0.6), 0 0 25px ${color}1a`,
+            borderColor: `${color}33`
+          }}
         >
           
           {/* Colors */}

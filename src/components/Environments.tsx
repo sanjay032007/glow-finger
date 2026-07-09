@@ -169,6 +169,12 @@ export function Environments({ mode, combo }: Props) {
       {/* Dynamic colorful particle field */}
       <DepthParticles count={250} intensity={intensity} />
       
+      {/* 3D Glowing Floor Grid */}
+      <gridHelper args={[100, 50, '#00f3ff', '#181829']} position={[0, -3.19, 0]} />
+      
+      {/* Specular Key Light for Hand specular highlights */}
+      <directionalLight position={[5, 10, 5]} intensity={1.8 * intensity} color="#ffffff" castShadow={false} />
+
       {/* Glossy Reflective Floor (Black Glass) */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -3.2, 0]}>
         <planeGeometry args={[100, 100]} />
