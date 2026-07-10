@@ -68,32 +68,41 @@
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     
     <script>
-      // Lock window.Module and locateFile to prevent MediaPipe Emscripten modules from colliding
+      // Double lock both Module and createMediapipeSolutionsPackedAssets to prevent MediaPipe Emscripten resource path collisions
       (function() {
-        var myModule = {
-          locateFile: function(file) {
-            if (file.includes('hands')) {
-              return "https://cdn.jsdelivr.net/npm/@mediapipe/hands/" + file;
-            }
-            return "https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/" + file;
+        var locateFileRouter = function(file) {
+          if (file.includes('hands')) {
+            return "https://cdn.jsdelivr.net/npm/@mediapipe/hands/" + file;
           }
+          return "https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/" + file;
         };
 
-        // Make locateFile read-only
+        // 1. Configure and lock Module
+        var myModule = { locateFile: locateFileRouter };
         Object.defineProperty(myModule, 'locateFile', {
-          value: myModule.locateFile,
+          value: locateFileRouter,
           writable: false,
           configurable: false
         });
-
-        // Make window.Module read-only so scripts cannot reassign it
         Object.defineProperty(window, 'Module', {
           value: myModule,
           writable: false,
           configurable: false
         });
 
-        // Set mediaPipeLoaded to true immediately since scripts are loaded statically
+        // 2. Configure and lock createMediapipeSolutionsPackedAssets
+        var myAssets = { locateFile: locateFileRouter };
+        Object.defineProperty(myAssets, 'locateFile', {
+          value: locateFileRouter,
+          writable: false,
+          configurable: false
+        });
+        Object.defineProperty(window, 'createMediapipeSolutionsPackedAssets', {
+          value: myAssets,
+          writable: false,
+          configurable: false
+        });
+
         window.mediaPipeLoaded = true;
       })();
     </script>
