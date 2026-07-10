@@ -11,6 +11,7 @@ import { GallerySection } from './components/GallerySection';
 import { Leaderboard } from './components/Leaderboard';
 import { useARTracking } from './hooks/useARTracking';
 import { FaceARCanvas } from './components/FaceARCanvas';
+import { AIGestureStudio } from './components/AIGestureStudio';
 import { useSmoothDrawing, type DrawMode, type SymmetryMode } from './hooks/useSmoothDrawing';
 import { useGameEngine } from './hooks/useGameEngine';
 import { Onboarding } from './components/Onboarding';
@@ -62,6 +63,7 @@ function App() {
   const [activeMaskIndex, setActiveMaskIndex] = useState(0);
   
   const [showSliders, setShowSliders] = useState(false);
+  const [activeTab, setActiveTab] = useState<'DRAW' | 'STUDIO'>('DRAW');
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [isFlashing, setIsFlashing] = useState(false);
   const [cameraFilter, setCameraFilter] = useState<CameraFilter>('NORMAL');
@@ -125,7 +127,7 @@ function App() {
     });
   };
 
-  const { isReady, error, handStateRef, faceStateRef, debugInfo } = useARTracking(videoRef, dimensions.width, dimensions.height, isLaunched, trackingMode);
+  const { isReady, error, handStateRef, faceStateRef, debugInfo } = useARTracking(videoRef, dimensions.width, dimensions.height, isLaunched && activeTab === 'DRAW', trackingMode);
   const gameEngine = useGameEngine();
   const { clearCanvas, saveToGallery, undo } = useSmoothDrawing(canvasRef, handStateRef, { color, size, glow, mode, symmetry }, gameEngine, videoRef, showPreview);
 
@@ -388,6 +390,32 @@ function App() {
       className="relative w-full h-[100dvh] bg-[#050505] overflow-hidden"
       onClick={() => setShowColorPicker(false)}
     >
+
+      {/* Page Switcher */}
+      {isLaunched && !gameEngine.isGameMode && (
+        <div className="absolute top-8 left-8 z-50 bg-[#131317]/80 backdrop-blur-2xl border border-white/10 rounded-full p-1.5 flex gap-1 shadow-2xl transition-all duration-300 hover:border-white/20">
+          <button
+            onClick={() => { setActiveTab('DRAW'); audio.playClick(); }}
+            className={`px-5 py-2 rounded-full font-bold text-xs uppercase tracking-widest transition-all ${
+              activeTab === 'DRAW' 
+                ? 'bg-[#00f3ff]/20 text-[#00f3ff] shadow-[0_0_15px_rgba(0,243,255,0.3)] border border-[#00f3ff]/50' 
+                : 'text-white/50 hover:bg-white/5 border border-transparent'
+            }`}
+          >
+            🎨 Creative Draw
+          </button>
+          <button
+            onClick={() => { setActiveTab('STUDIO'); audio.playClick(); }}
+            className={`px-5 py-2 rounded-full font-bold text-xs uppercase tracking-widest transition-all ${
+              activeTab === 'STUDIO' 
+                ? 'bg-[#b026ff]/20 text-[#b026ff] shadow-[0_0_15px_rgba(176,38,255,0.3)] border border-[#b026ff]/50' 
+                : 'text-white/50 hover:bg-white/5 border border-transparent'
+            }`}
+          >
+            ✨ Gesture Studio
+          </button>
+        </div>
+      )}
       
       <Onboarding handStateRef={handStateRef} />
       <AnimatePresence>
@@ -402,13 +430,21 @@ function App() {
           </motion.div>
         )}
       </AnimatePresence>
+      {activeTab === 'DRAW' ? (
+        <>
       <FPSIndicator />
       
       <CameraFilters />
       <CameraView videoRef={videoRef} showPreview={showPreview} cameraFilter={cameraFilter} />
             <DrawingCanvas canvasRef={canvasRef} width={dimensions.width} height={dimensions.height} />
       {trackingMode === 'FACE' && <FaceARCanvas faceStateRef={faceStateRef} activeMaskIndex={activeMaskIndex} />}
+        </>
+      ) : (
+        <AIGestureStudio />
+      )}
       
+      {activeTab === 'DRAW' && (
+        <>
       {/* Real-time Gesture Feedback Badge */}
       {!gameEngine.isGameMode && (
         <div className="absolute top-8 left-1/2 -translate-x-1/2 z-20 pointer-events-none">
@@ -774,6 +810,8 @@ function App() {
         </div>
       </motion.div>
 
+        </>
+      )}
       {/* Loading Overlay */}
       <AnimatePresence>
         {!isReady && !error && (
