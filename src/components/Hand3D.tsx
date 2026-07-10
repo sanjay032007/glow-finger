@@ -1,4 +1,4 @@
-import { useRef, useEffect, useMemo } from 'react';
+import { useRef, useEffect, useMemo, useState } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { useGLTF, Float, Center, Torus, ContactShadows } from '@react-three/drei';
 import * as THREE from 'three';
@@ -13,9 +13,26 @@ interface Particle {
   maxLife: number;
 }
 
-export function Hand3D({ isMobile }: { isMobile: boolean }) {
+interface SpawnedBlock {
+  id: number;
+  gridX: number;
+  gridZ: number;
+  y: number;
+  targetY: number;
+  velocity: number;
+  isSnapped: boolean;
+  color: string;
+}
+
+export function Hand3D({ isMobile, handStateRef }: { isMobile: boolean; handStateRef?: React.RefObject<any> }) {
   const { scene } = useGLTF('/right.glb');
+  const [blocks, setBlocks] = useState<SpawnedBlock[]>([]);
   const group = useRef<THREE.Group>(null!);
+  // Spawned Blocks physics state
+  const spawnedBlocksRef = useRef<SpawnedBlock[]>([]);
+  const lastSpawnTimeRef = useRef(0);
+  const blockIdCounterRef = useRef(0);
+  const heightMapRef = useRef<Record<string, number>>({});
   // Voxel Grid refs & memoized positions (Interacts with fingertips)
   const voxelsRef = useRef<{
     mesh: THREE.Mesh;
@@ -420,6 +437,100 @@ export function Hand3D({ isMobile }: { isMobile: boolean }) {
       jointPointsRef.current.geometry.attributes.color.needsUpdate = true;
     }
 
+    // 9. Voxel Spawning & Stacking Physics
+    const nowTime = Date.now();
+    const currentGesture = handStateRef?.current?.gesture || 'NONE';
+
+    // Spawn a block when gesture is OK (👌) or when mouse is clicked (isClickedRef.current)
+    const isSpawningGesture = currentGesture === 'OK' || currentGesture === 'PINCH';
+    
+    if ((isSpawningGesture || isClickedRef.current) && nowTime - lastSpawnTimeRef.current > 350) {
+      // Find the index fingertip bone to get spawn position
+      const indexTipBone = bonesRef.current.tips.find(b => b.name.toLowerCase().includes('index'));
+      if (indexTipBone) {
+        const spawnPos = new THREE.Vector3();
+        indexTipBone.getWorldPosition(spawnPos);
+
+        const size = 0.55;
+        // Snap to nearest grid coordinate
+        const gridX = Math.round((spawnPos.x - handX) / (size + 0.08));
+        const gridZ = Math.round(spawnPos.z / (size + 0.08));
+
+        // Limit grid bounds to match floor grid size
+        if (Math.abs(gridX) <= 4 && Math.abs(gridZ) <= 4) {
+          const colKey = `${gridX}_${gridZ}`;
+          const currentHeight = heightMapRef.current[colKey] || 0;
+
+          if (currentHeight < 8) { // max 8 blocks stacked
+            const targetY = -2.3 + (currentHeight * size);
+            
+            // Spawn the block!
+            const newBlock: SpawnedBlock = {
+              id: blockIdCounterRef.current++,
+              gridX,
+              gridZ,
+              y: spawnPos.y, // Start falling from fingertip height
+              targetY,
+              velocity: 0,
+              isSnapped: false,
+              color: currentGesture === 'OK' ? '#00f3ff' : '#ff007f' // Cyan for gesture, magenta for click
+            };
+
+            spawnedBlocksRef.current.push(newBlock);
+            heightMapRef.current[colKey] = currentHeight + 1;
+            lastSpawnTimeRef.current = nowTime;
+            
+            // Update React state so R3F renders the new block
+            setBlocks([...spawnedBlocksRef.current]);
+          }
+        }
+      }
+    }
+
+    // Process gravity and landing/snapping physics
+    let stateChanged = false;
+    spawnedBlocksRef.current.forEach((block) => {
+      if (block.isSnapped) return;
+
+      // Apply simple acceleration
+      block.velocity += 12 * delta; // Gravity constant
+      block.y -= block.velocity * delta;
+
+      // Check if it reached the target snap height
+      if (block.y <= block.targetY) {
+        block.y = block.targetY;
+        block.velocity = 0;
+        block.isSnapped = true;
+        stateChanged = true;
+
+        // Spawn a burst of particles at the snap point!
+        const snapPos = new THREE.Vector3(
+          block.gridX * (0.55 + 0.08) + handX,
+          block.targetY,
+          block.gridZ * (0.55 + 0.08)
+        );
+        for (let i = 0; i < 6; i++) {
+          particlesRef.current.push({
+            id: nextId.current++,
+            position: snapPos.clone(),
+            velocity: new THREE.Vector3(
+              (Math.random() - 0.5) * 1.5,
+              Math.random() * 2.0,
+              (Math.random() - 0.5) * 1.5
+            ),
+            color: new THREE.Color(block.color),
+            size: 0.12,
+            life: 0,
+            maxLife: 0.4 + Math.random() * 0.3
+          });
+        }
+      }
+    });
+
+    if (stateChanged) {
+      setBlocks([...spawnedBlocksRef.current]);
+    }
+
     // 8. Voxel Grid Interaction (Calculate distance from each block to closest fingertip)
     const tipsWorldPos = bonesRef.current.tips.map((bone) => {
       const pos = new THREE.Vector3();
@@ -555,6 +666,33 @@ export function Hand3D({ isMobile }: { isMobile: boolean }) {
           blending={THREE.AdditiveBlending}
         />
       </points>
+
+      {/* Dynamic Stacking Blocks */}
+      {blocks.map((block: SpawnedBlock) => {
+        const size = 0.55;
+        const posX = block.gridX * (size + 0.08) + handX;
+        const posZ = block.gridZ * (size + 0.08);
+        return (
+          <group key={block.id} position={[posX, block.y, posZ]}>
+            <mesh>
+              <boxGeometry args={[0.55, 0.55, 0.55]} />
+              <meshPhysicalMaterial
+                color={block.color}
+                emissive={block.color}
+                emissiveIntensity={block.isSnapped ? 0.3 : 1.5} // glows brighter when falling!
+                roughness={0.15}
+                metalness={0.7}
+                transparent
+                opacity={0.9}
+              />
+              <lineSegments>
+                <edgesGeometry attach="geometry" args={[new THREE.BoxGeometry(0.55, 0.55, 0.55)]} />
+                <lineBasicMaterial attach="material" color={block.color} linewidth={2} />
+              </lineSegments>
+            </mesh>
+          </group>
+        );
+      })}
 
       {/* Voxel Grid (Interacts dynamically with fingers) */}
       {voxelData.map((data, idx) => (

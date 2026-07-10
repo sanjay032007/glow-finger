@@ -246,7 +246,7 @@ function App() {
             <TestBridge />
             
             {/* Interactive 3D Hand */}
-            <Hand3D isMobile={isMobile} />
+            <Hand3D isMobile={isMobile} handStateRef={handStateRef} />
 
             {/* Post-Processing Neon Bloom (Disabled on mobile for performance) */}
             <SceneEffects isMobile={isMobile} />
