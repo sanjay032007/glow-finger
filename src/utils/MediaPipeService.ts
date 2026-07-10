@@ -26,6 +26,10 @@ export class MediaPipeService {
     onResults: (results: MediaPipeResults) => void,
     onError: (err: any) => void
   ) {
+    // Wait for MediaPipe scripts to be fully loaded and isolated
+    while (!(window as any).mediaPipeLoaded) {
+      await new Promise(r => setTimeout(r, 50));
+    }
     const HandsClass = getHandsClass();
     const FaceMeshClass = getFaceMeshClass();
     const CameraClass = getCameraClass();
