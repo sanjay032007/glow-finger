@@ -9,8 +9,7 @@ import { Hand3D } from './components/Hand3D';
 import { MiniDrawCanvas } from './components/MiniDrawCanvas';
 import { GallerySection } from './components/GallerySection';
 import { Leaderboard } from './components/Leaderboard';
-import { useHandTracking } from './hooks/useHandTracking';
-import { useFaceTracking } from './hooks/useFaceTracking';
+import { useARTracking } from './hooks/useARTracking';
 import { FaceARCanvas } from './components/FaceARCanvas';
 import { useSmoothDrawing, type DrawMode, type SymmetryMode } from './hooks/useSmoothDrawing';
 import { useGameEngine } from './hooks/useGameEngine';
@@ -126,8 +125,7 @@ function App() {
     });
   };
 
-  const { isReady, error, handStateRef, debugInfo } = useHandTracking(videoRef, dimensions.width, dimensions.height, isLaunched && trackingMode === 'HANDS');
-  const { faceStateRef } = useFaceTracking(videoRef, dimensions.width, dimensions.height, isLaunched && trackingMode === 'FACE');
+  const { isReady, error, handStateRef, faceStateRef, debugInfo } = useARTracking(videoRef, dimensions.width, dimensions.height, isLaunched, trackingMode);
   const gameEngine = useGameEngine();
   const { clearCanvas, saveToGallery, undo } = useSmoothDrawing(canvasRef, handStateRef, { color, size, glow, mode, symmetry }, gameEngine, videoRef, showPreview);
 
