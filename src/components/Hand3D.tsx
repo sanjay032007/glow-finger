@@ -220,6 +220,7 @@ export function Hand3D({ isMobile, handStateRef }: { isMobile: boolean; handStat
 
   useFrame((state, delta) => {
     const t = state.clock.getElapsedTime();
+    const currentGesture = handStateRef?.current?.gesture || 'NONE';
 
     // 1. Clamped Color Cycling (strictly cyan -> purple -> pink/magenta)
     const hueSolid = 0.5 + 0.19 * (Math.sin(t * 0.15) + 1); // 0.5 to 0.88 HSL
@@ -237,8 +238,20 @@ export function Hand3D({ isMobile, handStateRef }: { isMobile: boolean; handStat
 
     // 2. Bone Curling + Finger Spreading (Abduction for finger separation)
     const idleCurl = Math.sin(t * 1.5) * 0.08; 
-    const targetPinch = isClickedRef.current ? 1.0 : 0.0;
-    pinchFactorRef.current = THREE.MathUtils.lerp(pinchFactorRef.current, targetPinch, 0.15);
+    const isPinching = currentGesture === 'OK' || currentGesture === 'PINCH';
+    
+    // Smoothly transition pinch states based on hand tracking gestures
+    let targetPinch = 0.0;
+    if (isPinching) {
+      targetPinch = 1.0;
+    } else if (currentGesture === 'DRAW' || currentGesture === 'POINT') {
+      // Extended index finger, other fingers curled
+      targetPinch = 0.78;
+    } else if (isClickedRef.current) {
+      targetPinch = 1.0;
+    }
+
+    pinchFactorRef.current = THREE.MathUtils.lerp(pinchFactorRef.current, targetPinch, 0.18);
     
     const activePinch = pinchFactorRef.current;
     const activeIdle = (1 - pinchFactorRef.current) * idleCurl;
@@ -246,7 +259,9 @@ export function Hand3D({ isMobile, handStateRef }: { isMobile: boolean; handStat
     // Apply curls + dynamic spreading offsets
     bonesRef.current.index.forEach((bone, idx) => {
       if (idx > 0) {
-        bone.rotation.z = -0.6 * activePinch + activeIdle;
+        // Keep index finger straight (uncurled) when drawing
+        const indexPinchFactor = currentGesture === 'DRAW' || currentGesture === 'POINT' ? 0 : activePinch;
+        bone.rotation.z = -0.6 * indexPinchFactor + activeIdle;
       } else {
         bone.rotation.y = -0.15; // spread index outward left
       }
@@ -285,12 +300,37 @@ export function Hand3D({ isMobile, handStateRef }: { isMobile: boolean; handStat
       }
     });
 
-    // 3. Hand Positioning & Natural Wrist Sway (avoid ugly cut-off base rotation)
+    // 3. Hand Positioning (Smoothly tracking MediaPipe coordinate or falling back to pointer)
+    const trackedPos = handStateRef?.current?.position;
     if (group.current) {
-      // Natural vertical alignment pointing upwards/facing user
-      group.current.rotation.x = -Math.PI / 6 + (-state.pointer.y * Math.PI) / 10 + Math.cos(t * 0.15) * 0.05;
-      group.current.rotation.y = Math.PI + Math.sin(t * 0.2) * 0.3 + (state.pointer.x * Math.PI) / 8;
-      group.current.rotation.z = Math.cos(t * 0.25) * 0.03;
+      if (trackedPos) {
+        // Map pixel coordinates to 3D world space coordinates
+        const ndcX = (trackedPos.x / window.innerWidth) * 2 - 1;
+        const ndcY = -(trackedPos.y / window.innerHeight) * 2 + 1;
+        
+        // Convert NDC to Three.js coordinates scaled to viewport
+        const targetX = ndcX * (viewport.width / 2);
+        const targetY = ndcY * (viewport.height / 2) - 0.3; // Offset slightly down to align naturally
+        const targetZ = (trackedPos.z || 0) * -2.0;
+
+        group.current.position.x = THREE.MathUtils.lerp(group.current.position.x, targetX, 0.2);
+        group.current.position.y = THREE.MathUtils.lerp(group.current.position.y, targetY, 0.2);
+        group.current.position.z = THREE.MathUtils.lerp(group.current.position.z, targetZ, 0.2);
+
+        // Rotation matches hand facing user
+        group.current.rotation.x = -Math.PI / 4 + Math.cos(t * 0.1) * 0.03;
+        group.current.rotation.y = Math.PI; // Face user
+        group.current.rotation.z = Math.cos(t * 0.15) * 0.02;
+      } else {
+        // Fallback to mouse pointer sway
+        group.current.position.x = THREE.MathUtils.lerp(group.current.position.x, handX, 0.1);
+        group.current.position.y = THREE.MathUtils.lerp(group.current.position.y, handY, 0.1);
+        group.current.position.z = THREE.MathUtils.lerp(group.current.position.z, 0, 0.1);
+
+        group.current.rotation.x = -Math.PI / 6 + (-state.pointer.y * Math.PI) / 10 + Math.cos(t * 0.15) * 0.05;
+        group.current.rotation.y = Math.PI + Math.sin(t * 0.2) * 0.3 + (state.pointer.x * Math.PI) / 8;
+        group.current.rotation.z = Math.cos(t * 0.25) * 0.03;
+      }
     }
 
     // 4. Portal Rings Animations
@@ -439,7 +479,6 @@ export function Hand3D({ isMobile, handStateRef }: { isMobile: boolean; handStat
 
     // 9. Voxel Spawning & Stacking Physics
     const nowTime = Date.now();
-    const currentGesture = handStateRef?.current?.gesture || 'NONE';
 
     // Spawn a block when gesture is OK (👌) or when mouse is clicked (isClickedRef.current)
     const isSpawningGesture = currentGesture === 'OK' || currentGesture === 'PINCH';
