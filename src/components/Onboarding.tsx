@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { MutableRefObject } from 'react';
 import { Hand, HandMetal, CheckCircle2, Sparkles, SlidersHorizontal, Repeat, Trophy, Info, ChevronRight, ChevronLeft } from 'lucide-react';
-import type { HandState } from '../hooks/useHandTracking';
+import type { HandState } from '../hooks/useARTracking';
 
 interface Props {
   handStateRef?: MutableRefObject<HandState>;

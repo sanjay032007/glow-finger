@@ -2,7 +2,7 @@ import React, { useRef } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { Environment, MeshTransmissionMaterial, Sparkles } from '@react-three/drei';
 import * as THREE from 'three';
-import type { FaceState } from '../hooks/useFaceTracking';
+import type { FaceState } from '../hooks/useARTracking';
 
 // Simple Cyberpunk Visor
 const CyberpunkVisor = ({ faceStateRef }: { faceStateRef: React.MutableRefObject<FaceState> }) => {
