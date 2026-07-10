@@ -814,7 +814,7 @@ function App() {
       )}
       {/* Loading Overlay */}
       <AnimatePresence>
-        {!isReady && !error && (
+        {activeTab === 'DRAW' && !isReady && !error && (
           <motion.div 
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             className="absolute inset-0 bg-[#050505]/90 flex items-center justify-center z-30 backdrop-blur-md"
@@ -833,7 +833,7 @@ function App() {
       
       {/* Error State */}
       <AnimatePresence>
-        {error && (
+        {activeTab === 'DRAW' && error && (
           <motion.div 
             initial={{ opacity: 0 }} animate={{ opacity: 1 }}
             className="absolute inset-0 bg-[#050505]/95 flex items-center justify-center z-40 p-8 pointer-events-auto backdrop-blur-xl"
