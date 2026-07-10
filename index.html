@@ -67,48 +67,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     
-    <script>
-      // Double lock both Module and createMediapipeSolutionsPackedAssets to prevent MediaPipe Emscripten resource path collisions
-      (function() {
-        var locateFileRouter = function(file) {
-          if (file.includes('hands')) {
-            return "https://cdn.jsdelivr.net/npm/@mediapipe/hands/" + file;
-          }
-          return "https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/" + file;
-        };
 
-        // 1. Configure and lock Module
-        var myModule = { locateFile: locateFileRouter };
-        Object.defineProperty(myModule, 'locateFile', {
-          value: locateFileRouter,
-          writable: false,
-          configurable: false
-        });
-        Object.defineProperty(window, 'Module', {
-          value: myModule,
-          writable: false,
-          configurable: false
-        });
-
-        // 2. Configure and lock createMediapipeSolutionsPackedAssets
-        var myAssets = { locateFile: locateFileRouter };
-        Object.defineProperty(myAssets, 'locateFile', {
-          value: locateFileRouter,
-          writable: false,
-          configurable: false
-        });
-        Object.defineProperty(window, 'createMediapipeSolutionsPackedAssets', {
-          value: myAssets,
-          writable: false,
-          configurable: false
-        });
-
-        window.mediaPipeLoaded = true;
-      })();
-    </script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js" crossorigin="anonymous"></script>
   </head>
   <body>
     <div id="root"></div>

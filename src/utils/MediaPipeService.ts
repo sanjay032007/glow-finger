@@ -1,9 +1,7 @@
 // MediaPipe service wrapper to initialize and run Hands + FaceMesh on a unified camera loop.
 import { getHandGesture, type GestureType } from './gestureDetection';
 
-const getHandsClass = () => (window as any).Hands;
-const getFaceMeshClass = () => (window as any).FaceMesh;
-const getCameraClass = () => (window as any).Camera;
+// MediaPipe loaded via npm packages
 
 export interface MediaPipeResults {
   handLandmarks: any[] | null;
@@ -26,35 +24,30 @@ export class MediaPipeService {
     onResults: (results: MediaPipeResults) => void,
     onError: (err: any) => void
   ) {
-    const HandsClass = getHandsClass();
-    const FaceMeshClass = getFaceMeshClass();
-    const CameraClass = getCameraClass();
-
-    if (!HandsClass || !FaceMeshClass || !CameraClass) {
-      throw new Error("MediaPipe libraries not loaded from CDN.");
-    }
-
     try {
       const isMobile = window.innerWidth < 768;
 
-      const locateFile = (file: string) => {
-        if (file.includes('hands')) {
-          return "https://cdn.jsdelivr.net/npm/@mediapipe/hands/" + file;
-        }
-        return "https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/" + file;
-      };
+      const [{ Hands }, { FaceMesh }, { Camera }] = await Promise.all([
+        import('@mediapipe/hands'),
+        import('@mediapipe/face_mesh'),
+        import('@mediapipe/camera_utils')
+      ]);
 
       // 1. Hands setup
-      this.hands = new HandsClass({ locateFile });
+      this.hands = new Hands({
+        locateFile: (file: string) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
+      });
       this.hands.setOptions({
-        maxNumHands: 2, // Track both hands
+        maxNumHands: 2,
         modelComplexity: isMobile ? 0 : 1,
         minDetectionConfidence: 0.6,
         minTrackingConfidence: 0.6
       });
 
       // 2. FaceMesh setup
-      this.faceMesh = new FaceMeshClass({ locateFile });
+      this.faceMesh = new FaceMesh({
+        locateFile: (file: string) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`
+      });
       this.faceMesh.setOptions({
         maxNumFaces: 1,
         refineLandmarks: false,
@@ -82,7 +75,7 @@ export class MediaPipeService {
       }, 1000);
 
       // 3. Start Camera Loop
-      this.camera = new CameraClass(videoEl, {
+      this.camera = new Camera(videoEl, {
         onFrame: async () => {
           this.frameCount++;
           if (this.isProcessing) return;

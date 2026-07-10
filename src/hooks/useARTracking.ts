@@ -1,9 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { getHandGesture, type GestureType } from '../utils/gestureDetection';
 
-const getHandsClass = () => (window as any).Hands;
-const getFaceMeshClass = () => (window as any).FaceMesh;
-const getCameraClass = () => (window as any).Camera;
+// MediaPipe loaded via npm packages
 
 interface Point { x: number; y: number; z: number; }
 
@@ -52,31 +50,21 @@ export const useARTracking = (
     let camera: any = null;
     let hands: any = null;
     let faceMesh: any = null;
-    let pollTimeout: number;
 
-    const initTracking = () => {
-      const HandsClass = getHandsClass();
-      const FaceMeshClass = getFaceMeshClass();
-      const CameraClass = getCameraClass();
-
-      if (!HandsClass || !FaceMeshClass || !CameraClass) {
-        console.log("Waiting for MediaPipe CDN scripts to load...");
-        pollTimeout = setTimeout(initTracking, 500) as any;
-        return;
-      }
-
+    const initTracking = async () => {
       try {
         const isMobile = window.innerWidth < 768;
 
-        const locateFile = (file: string) => {
-          if (file.includes('hands')) {
-            return "https://cdn.jsdelivr.net/npm/@mediapipe/hands/" + file;
-          }
-          return "https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/" + file;
-        };
+        const [{ Hands }, { FaceMesh }, { Camera }] = await Promise.all([
+          import('@mediapipe/hands'),
+          import('@mediapipe/face_mesh'),
+          import('@mediapipe/camera_utils')
+        ]);
 
         // 1. Initialize Hands Model
-        hands = new HandsClass({ locateFile });
+        hands = new Hands({
+          locateFile: (file: string) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
+        });
         hands.setOptions({
           maxNumHands: 1,
           modelComplexity: isMobile ? 0 : 1,
@@ -85,7 +73,9 @@ export const useARTracking = (
         });
 
         // 2. Initialize Face Mesh Model
-        faceMesh = new FaceMeshClass({ locateFile });
+        faceMesh = new FaceMesh({
+          locateFile: (file: string) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`
+        });
         faceMesh.setOptions({
           maxNumFaces: 1,
           refineLandmarks: false,
@@ -196,7 +186,7 @@ export const useARTracking = (
 
         // 5. Unified Camera Frame Loop
         let isProcessing = false;
-        camera = new CameraClass(videoRef.current, {
+        camera = new Camera(videoRef.current, {
           onFrame: async () => {
             debugRef.current.frames++;
             if (isProcessing) return;
@@ -235,7 +225,6 @@ export const useARTracking = (
     initTracking();
 
     return () => {
-      clearTimeout(pollTimeout);
       if (camera) { camera.stop(); camera = null; }
       if (hands) { hands.close(); hands = null; }
       if (faceMesh) { faceMesh.close(); faceMesh = null; }
