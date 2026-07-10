@@ -16,6 +16,31 @@ interface Particle {
 export function Hand3D({ isMobile }: { isMobile: boolean }) {
   const { scene } = useGLTF('/right.glb');
   const group = useRef<THREE.Group>(null!);
+  // Voxel Grid refs & memoized positions (Interacts with fingertips)
+  const voxelsRef = useRef<{
+    mesh: THREE.Mesh;
+    baselineY: number;
+    x: number;
+    z: number;
+  }[]>([]);
+
+  const voxelData = useMemo(() => {
+    const list = [];
+    const size = 0.55;
+    const countX = 4; // 9x9 grid centered under the hand
+    const countZ = 4;
+    for (let x = -countX; x <= countX; x++) {
+      for (let z = -countZ; z <= countZ; z++) {
+        list.push({
+          id: `${x}_${z}`,
+          x: x * (size + 0.08),
+          z: z * (size + 0.08),
+          baselineY: -2.3 // Placed right above the floor grid
+        });
+      }
+    }
+    return list;
+  }, []);
   const ring1 = useRef<THREE.Mesh>(null!);
   const ring2 = useRef<THREE.Mesh>(null!);
   const lightRef = useRef<THREE.PointLight>(null!);
@@ -395,6 +420,46 @@ export function Hand3D({ isMobile }: { isMobile: boolean }) {
       jointPointsRef.current.geometry.attributes.color.needsUpdate = true;
     }
 
+    // 8. Voxel Grid Interaction (Calculate distance from each block to closest fingertip)
+    const tipsWorldPos = bonesRef.current.tips.map((bone) => {
+      const pos = new THREE.Vector3();
+      bone.getWorldPosition(pos);
+      return pos;
+    });
+
+    voxelsRef.current.forEach((voxel) => {
+      if (!voxel || !voxel.mesh) return;
+
+      let minDist = 9999;
+      tipsWorldPos.forEach((tip) => {
+        // Calculate 3D distance between fingertip and voxel center
+        const voxelWorldPos = new THREE.Vector3(voxel.x + handX, voxel.baselineY, voxel.z);
+        const dist = tip.distanceTo(voxelWorldPos);
+        if (dist < minDist) {
+          minDist = dist;
+        }
+      });
+
+      // Depress block and increase emissive intensity based on proximity
+      const maxTriggerDist = 2.2;
+      const factor = Math.max(0, 1 - (minDist / maxTriggerDist));
+
+      // Standard linear interpolation for smooth depression physics
+      const targetY = voxel.baselineY - (factor * 0.45);
+      voxel.mesh.position.y = THREE.MathUtils.lerp(voxel.mesh.position.y, targetY, 0.15);
+
+      // Dynamically alter material properties
+      const mat = voxel.mesh.material as THREE.MeshPhysicalMaterial;
+      if (mat) {
+        mat.emissiveIntensity = 0.15 + (factor * 2.5);
+        // Color transition from deep cyan to neon magenta/purple on approach
+        const baseColor = new THREE.Color('#00f3ff');
+        const activeColor = new THREE.Color('#ff007f');
+        mat.color.copy(baseColor).lerp(activeColor, factor);
+        mat.emissive.copy(baseColor).lerp(activeColor, factor);
+      }
+    });
+
     // 7. Dynamic light updates
     if (lightRef.current && group.current) {
       const handPos = new THREE.Vector3();
@@ -490,6 +555,43 @@ export function Hand3D({ isMobile }: { isMobile: boolean }) {
           blending={THREE.AdditiveBlending}
         />
       </points>
+
+      {/* Voxel Grid (Interacts dynamically with fingers) */}
+      {voxelData.map((data, idx) => (
+        <group key={data.id} position={[data.x + handX, 0, data.z]}>
+          <mesh
+            ref={(el) => {
+              if (el) {
+                voxelsRef.current[idx] = {
+                  mesh: el as THREE.Mesh,
+                  baselineY: data.baselineY,
+                  x: data.x,
+                  z: data.z
+                };
+              }
+            }}
+            position={[0, data.baselineY, 0]}
+          >
+            <boxGeometry args={[0.55, 0.55, 0.55]} />
+            <meshPhysicalMaterial
+              color="#00f3ff"
+              emissive="#00f3ff"
+              emissiveIntensity={0.15}
+              roughness={0.1}
+              metalness={0.8}
+              transparent
+              opacity={0.85}
+              transmission={0.4}
+              thickness={0.5}
+            />
+            {/* Outline box segments to match voxel grid look in prompt image */}
+            <lineSegments>
+              <edgesGeometry attach="geometry" args={[new THREE.BoxGeometry(0.55, 0.55, 0.55)]} />
+              <lineBasicMaterial attach="material" color="#00f3ff" linewidth={1.5} />
+            </lineSegments>
+          </mesh>
+        </group>
+      ))}
 
       {/* Soft ground contact shadow for anchoring */}
       <ContactShadows 
