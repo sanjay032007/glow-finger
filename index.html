@@ -68,39 +68,38 @@
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     
     <script>
-      // Dynamically load MediaPipe scripts sequentially to isolate Emscripten global Module scope
-      (async function() {
-        window.mediaPipeLoaded = false;
-        
-        const loadScript = (src) => new Promise((resolve, reject) => {
-          const script = document.createElement('script');
-          script.src = src;
-          script.crossOrigin = 'anonymous';
-          script.onload = resolve;
-          script.onerror = reject;
-          document.head.appendChild(script);
+      // Lock window.Module and locateFile to prevent MediaPipe Emscripten modules from colliding
+      (function() {
+        var myModule = {
+          locateFile: function(file) {
+            if (file.includes('hands')) {
+              return "https://cdn.jsdelivr.net/npm/@mediapipe/hands/" + file;
+            }
+            return "https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/" + file;
+          }
+        };
+
+        // Make locateFile read-only
+        Object.defineProperty(myModule, 'locateFile', {
+          value: myModule.locateFile,
+          writable: false,
+          configurable: false
         });
 
-        try {
-          console.log("Initializing isolated MediaPipe load sequence...");
-          await loadScript("https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js");
-          
-          // Load Hands in its own Module scope
-          await loadScript("https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js");
-          
-          // Delete global Emscripten Module to isolate Hands scope from Face Mesh scope
-          delete window.Module;
-          
-          // Load Face Mesh
-          await loadScript("https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js");
-          
-          window.mediaPipeLoaded = true;
-          console.log("MediaPipe scripts loaded and isolated successfully.");
-        } catch (e) {
-          console.error("Failed to load MediaPipe scripts:", e);
-        }
+        // Make window.Module read-only so scripts cannot reassign it
+        Object.defineProperty(window, 'Module', {
+          value: myModule,
+          writable: false,
+          configurable: false
+        });
+
+        // Set mediaPipeLoaded to true immediately since scripts are loaded statically
+        window.mediaPipeLoaded = true;
       })();
     </script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js" crossorigin="anonymous"></script>
   </head>
   <body>
     <div id="root"></div>
