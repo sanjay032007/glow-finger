@@ -439,14 +439,12 @@ function App() {
 
       {/* 3D AR Layer: Interactive Hand & Voxel Blocks overlaying the camera feed */}
       {trackingMode === 'HANDS' && (
-        <div className="absolute inset-0 z-10 pointer-events-none">
+        <div className="absolute inset-0 z-20 pointer-events-none">
           <Canvas camera={{ position: [0, 0, 8], fov: 45 }}>
-            <ambientLight intensity={0.7} />
+            <ambientLight intensity={0.8} />
             <pointLight position={[10, 10, 10]} intensity={1.5} />
             
             <Hand3D isMobile={isMobile} handStateRef={handStateRef} />
-            
-            <SceneEffects isMobile={isMobile} />
           </Canvas>
         </div>
       )}
