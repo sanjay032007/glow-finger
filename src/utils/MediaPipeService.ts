@@ -37,10 +37,15 @@ export class MediaPipeService {
     try {
       const isMobile = window.innerWidth < 768;
 
+      const locateFile = (file: string) => {
+        if (file.includes('hands')) {
+          return "https://cdn.jsdelivr.net/npm/@mediapipe/hands/" + file;
+        }
+        return "https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/" + file;
+      };
+
       // 1. Hands setup
-      this.hands = new HandsClass({
-        locateFile: (file: string) => "https://cdn.jsdelivr.net/npm/@mediapipe/hands/" + file
-      });
+      this.hands = new HandsClass({ locateFile });
       this.hands.setOptions({
         maxNumHands: 2, // Track both hands
         modelComplexity: isMobile ? 0 : 1,
@@ -49,9 +54,7 @@ export class MediaPipeService {
       });
 
       // 2. FaceMesh setup
-      this.faceMesh = new FaceMeshClass({
-        locateFile: (file: string) => "https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/" + file
-      });
+      this.faceMesh = new FaceMeshClass({ locateFile });
       this.faceMesh.setOptions({
         maxNumFaces: 1,
         refineLandmarks: false,

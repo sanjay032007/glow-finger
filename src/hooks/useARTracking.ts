@@ -68,10 +68,15 @@ export const useARTracking = (
       try {
         const isMobile = window.innerWidth < 768;
 
+        const locateFile = (file: string) => {
+          if (file.includes('hands')) {
+            return "https://cdn.jsdelivr.net/npm/@mediapipe/hands/" + file;
+          }
+          return "https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/" + file;
+        };
+
         // 1. Initialize Hands Model
-        hands = new HandsClass({
-          locateFile: (file: string) => "https://cdn.jsdelivr.net/npm/@mediapipe/hands/" + file
-        });
+        hands = new HandsClass({ locateFile });
         hands.setOptions({
           maxNumHands: 1,
           modelComplexity: isMobile ? 0 : 1,
@@ -80,9 +85,7 @@ export const useARTracking = (
         });
 
         // 2. Initialize Face Mesh Model
-        faceMesh = new FaceMeshClass({
-          locateFile: (file: string) => "https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/" + file
-        });
+        faceMesh = new FaceMeshClass({ locateFile });
         faceMesh.setOptions({
           maxNumFaces: 1,
           refineLandmarks: false,
