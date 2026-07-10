@@ -13,6 +13,7 @@ export interface MediaPipeResults {
 export class MediaPipeService {
   private handLandmarker: HandLandmarker | null = null;
   private faceLandmarker: FaceLandmarker | null = null;
+  private stream: MediaStream | null = null;
   private animFrameId = 0;
   private stopped = false;
   private frameCount = 0;
@@ -52,6 +53,18 @@ export class MediaPipeService {
           minTrackingConfidence: 0.5
         })
       ]);
+
+      // Start the camera stream using standard browser APIs
+      this.stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          width: isMobile ? 640 : 1280,
+          height: isMobile ? 480 : 720,
+          facingMode: 'user'
+        },
+        audio: false
+      });
+      videoEl.srcObject = this.stream;
+      await videoEl.play();
 
       // Wait for video
       await new Promise<void>((resolve) => {
@@ -112,5 +125,11 @@ export class MediaPipeService {
     this.faceLandmarker?.close();
     this.handLandmarker = null;
     this.faceLandmarker = null;
+
+    // Stop all tracks in the camera stream to turn off the camera light
+    if (this.stream) {
+      this.stream.getTracks().forEach(track => track.stop());
+      this.stream = null;
+    }
   }
 }

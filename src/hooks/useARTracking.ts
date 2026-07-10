@@ -53,6 +53,7 @@ export const useARTracking = (
 
     const initAndRun = async () => {
       try {
+        const isMobile = window.innerWidth < 768;
         const vision = await FilesetResolver.forVisionTasks(WASM_CDN);
 
         // Initialize both models in parallel using the same vision WASM env
@@ -81,8 +82,20 @@ export const useARTracking = (
           })
         ]);
 
-        // Wait for the video element to be ready
+        // Start the camera stream using standard browser APIs
         const video = videoRef.current!;
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            width: isMobile ? 640 : 1280,
+            height: isMobile ? 480 : 720,
+            facingMode: 'user'
+          },
+          audio: false
+        });
+        video.srcObject = stream;
+        await video.play();
+
+        // Wait for the video element to be ready
         await new Promise<void>((resolve) => {
           if (video.readyState >= 2) return resolve();
           video.addEventListener('loadeddata', () => resolve(), { once: true });
@@ -176,6 +189,13 @@ export const useARTracking = (
       cancelAnimationFrame(animFrameId);
       handLandmarker?.close();
       faceLandmarker?.close();
+      
+      // Stop all tracks in the camera stream to turn off the camera light
+      if (videoRef.current && videoRef.current.srcObject) {
+        const stream = videoRef.current.srcObject as MediaStream;
+        stream.getTracks().forEach(track => track.stop());
+        videoRef.current.srcObject = null;
+      }
       setIsReady(false);
     };
   }, [isLaunched, videoRef]);
