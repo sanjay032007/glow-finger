@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
+import { HandLandmarker, FaceLandmarker, FilesetResolver, type NormalizedLandmark } from '@mediapipe/tasks-vision';
 import { getHandGesture, type GestureType } from '../utils/gestureDetection';
-
-// MediaPipe loaded via npm packages
 
 interface Point { x: number; y: number; z: number; }
 
@@ -16,6 +15,8 @@ export interface FaceState {
   boundingBox: { xMin: number, yMin: number, xMax: number, yMax: number, width: number, height: number } | null;
 }
 
+const WASM_CDN = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision/wasm';
+
 export const useARTracking = (
   videoRef: React.RefObject<HTMLVideoElement>,
   canvasWidth: number,
@@ -25,7 +26,6 @@ export const useARTracking = (
 ) => {
   const [isReady, setIsReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
   const [debugInfo, setDebugInfo] = useState({ frames: 0, results: 0, gesture: 'NONE', x: 0, y: 0, z: 0 });
   const debugRef = useRef({ frames: 0, results: 0, gesture: 'NONE', x: 0, y: 0, z: 0 });
 
@@ -38,7 +38,6 @@ export const useARTracking = (
     return () => clearInterval(updateDebug);
   }, [isLaunched]);
 
-  // Keep trackingMode in ref for immediate access inside async loop
   const trackingModeRef = useRef(trackingMode);
   useEffect(() => {
     trackingModeRef.current = trackingMode;
@@ -47,187 +46,136 @@ export const useARTracking = (
   useEffect(() => {
     if (!isLaunched || !videoRef.current) return;
 
-    let camera: any = null;
-    let hands: any = null;
-    let faceMesh: any = null;
+    let handLandmarker: HandLandmarker | null = null;
+    let faceLandmarker: FaceLandmarker | null = null;
+    let animFrameId: number;
+    let stopped = false;
 
-    const initTracking = async () => {
+    const initAndRun = async () => {
       try {
-        const isMobile = window.innerWidth < 768;
+        const vision = await FilesetResolver.forVisionTasks(WASM_CDN);
 
-        const [{ Hands }, { FaceMesh }, { Camera }] = await Promise.all([
-          import('@mediapipe/hands'),
-          import('@mediapipe/face_mesh'),
-          import('@mediapipe/camera_utils')
+        // Initialize both models in parallel using the same vision WASM env
+        [handLandmarker, faceLandmarker] = await Promise.all([
+          HandLandmarker.createFromOptions(vision, {
+            baseOptions: {
+              modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task',
+              delegate: 'GPU'
+            },
+            runningMode: 'VIDEO',
+            numHands: 1,
+            minHandDetectionConfidence: 0.6,
+            minHandPresenceConfidence: 0.6,
+            minTrackingConfidence: 0.6
+          }),
+          FaceLandmarker.createFromOptions(vision, {
+            baseOptions: {
+              modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task',
+              delegate: 'GPU'
+            },
+            runningMode: 'VIDEO',
+            numFaces: 1,
+            minFaceDetectionConfidence: 0.5,
+            minFacePresenceConfidence: 0.5,
+            minTrackingConfidence: 0.5
+          })
         ]);
 
-        // 1. Initialize Hands Model
-        hands = new Hands({
-          locateFile: (file: string) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
-        });
-        hands.setOptions({
-          maxNumHands: 1,
-          modelComplexity: isMobile ? 0 : 1,
-          minDetectionConfidence: 0.7,
-          minTrackingConfidence: 0.7
+        // Wait for the video element to be ready
+        const video = videoRef.current!;
+        await new Promise<void>((resolve) => {
+          if (video.readyState >= 2) return resolve();
+          video.addEventListener('loadeddata', () => resolve(), { once: true });
         });
 
-        // 2. Initialize Face Mesh Model
-        faceMesh = new FaceMesh({
-          locateFile: (file: string) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`
-        });
-        faceMesh.setOptions({
-          maxNumFaces: 1,
-          refineLandmarks: false,
-          minDetectionConfidence: 0.6,
-          minTrackingConfidence: 0.6
-        });
+        setIsReady(true);
 
-        // 3. Setup Hands callback
-        hands.onResults((results: any) => {
-          debugRef.current.results++;
-          if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
-            const rawLandmarks = results.multiHandLandmarks[0];
-            const gesture = getHandGesture(rawLandmarks);
-
-            const videoEl = videoRef.current;
-            const videoWidth = videoEl ? videoEl.videoWidth : 1280;
-            const videoHeight = videoEl ? videoEl.videoHeight : 720;
-
-            const videoAspect = videoWidth / videoHeight;
-            const canvasW = videoEl ? videoEl.clientWidth || canvasWidth : canvasWidth;
-            const canvasH = videoEl ? videoEl.clientHeight || canvasHeight : canvasHeight;
-            const canvasAspect = canvasW / canvasH;
-
-            let scale = 1;
-            let offsetX = 0;
-            let offsetY = 0;
-
-            if (canvasAspect > videoAspect) {
-              scale = canvasW / videoWidth;
-              offsetY = (videoHeight * scale - canvasH) / 2;
-            } else {
-              scale = canvasH / videoHeight;
-              offsetX = (videoWidth * scale - canvasW) / 2;
-            }
-
-            const landmarks = rawLandmarks.map((lm: any) => ({
-              x: (1 - lm.x) * videoWidth * scale - offsetX,
-              y: lm.y * videoHeight * scale - offsetY,
-              z: lm.z
-            }));
-
-            const indexTip = landmarks[8];
-            handStateRef.current = {
-              position: { x: indexTip.x, y: indexTip.y, z: indexTip.z },
-              gesture,
-              landmarks
-            };
-
-            debugRef.current.gesture = gesture;
-            debugRef.current.x = indexTip.x;
-            debugRef.current.y = indexTip.y;
-            debugRef.current.z = indexTip.z;
-          } else {
-            handStateRef.current = { position: null, gesture: 'NONE', landmarks: undefined };
-            debugRef.current.gesture = 'NONE';
-            debugRef.current.z = 0;
+        // Inference loop (requestAnimationFrame — zero busy-wait)
+        const processFrame = () => {
+          if (stopped) return;
+          const video = videoRef.current;
+          if (!video || video.readyState < 2 || video.videoWidth === 0) {
+            animFrameId = requestAnimationFrame(processFrame);
+            return;
           }
-        });
 
-        // 4. Setup Face Mesh callback
-        faceMesh.onResults((results: any) => {
-          if (results.multiFaceLandmarks && results.multiFaceLandmarks.length > 0) {
-            const rawLandmarks = results.multiFaceLandmarks[0];
+          const now = performance.now();
+          debugRef.current.frames++;
 
-            const videoEl = videoRef.current;
-            const videoWidth = videoEl ? videoEl.videoWidth : 1280;
-            const videoHeight = videoEl ? videoEl.videoHeight : 720;
+          if (trackingModeRef.current === 'HANDS' && handLandmarker) {
+            const result = handLandmarker.detectForVideo(video, now);
+            if (result.landmarks && result.landmarks.length > 0) {
+              const rawLandmarks = result.landmarks[0] as NormalizedLandmark[];
+              const gesture = getHandGesture(rawLandmarks);
 
-            const videoAspect = videoWidth / videoHeight;
-            const canvasW = videoEl ? videoEl.clientWidth || canvasWidth : canvasWidth;
-            const canvasH = videoEl ? videoEl.clientHeight || canvasHeight : canvasHeight;
-            const canvasAspect = canvasW / canvasH;
+              const videoWidth = video.videoWidth;
+              const videoHeight = video.videoHeight;
+              const canvasAspect = canvasWidth / canvasHeight;
+              const videoAspect = videoWidth / videoHeight;
 
-            let scale = 1;
-            let offsetX = 0;
-            let offsetY = 0;
-
-            if (canvasAspect > videoAspect) {
-              scale = canvasW / videoWidth;
-              offsetY = (videoHeight * scale - canvasH) / 2;
-            } else {
-              scale = canvasH / videoHeight;
-              offsetX = (videoWidth * scale - canvasW) / 2;
-            }
-
-            const landmarks = rawLandmarks.map((lm: any) => ({
-              x: ((1 - lm.x) * videoWidth * scale - offsetX) / canvasW * 2 - 1,
-              y: -(((lm.y * videoHeight * scale - offsetY) / canvasH) * 2 - 1),
-              z: -lm.z * 5
-            }));
-
-            let xMin = 999, yMin = 999, xMax = -999, yMax = -999;
-            landmarks.forEach((lm: any) => {
-              if (lm.x < xMin) xMin = lm.x;
-              if (lm.x > xMax) xMax = lm.x;
-              if (lm.y < yMin) yMin = lm.y;
-              if (lm.y > yMax) yMax = lm.y;
-            });
-
-            faceStateRef.current = {
-              landmarks,
-              boundingBox: { xMin, yMin, xMax, yMax, width: xMax - xMin, height: yMax - yMin }
-            };
-          } else {
-            faceStateRef.current = { landmarks: null, boundingBox: null };
-          }
-        });
-
-        // 5. Unified Camera Frame Loop
-        let isProcessing = false;
-        camera = new Camera(videoRef.current, {
-          onFrame: async () => {
-            debugRef.current.frames++;
-            if (isProcessing) return;
-
-            const videoEl = videoRef.current;
-            if (videoEl && videoEl.readyState >= 2 && videoEl.videoWidth > 0) {
-              isProcessing = true;
-              try {
-                if (trackingModeRef.current === 'HANDS') {
-                  if (hands) await hands.send({ image: videoEl });
-                } else if (trackingModeRef.current === 'FACE') {
-                  if (faceMesh) await faceMesh.send({ image: videoEl });
-                }
-              } catch (err: any) {
-                setError("Tracking error: " + (err && err.message ? err.message : String(err)));
-              } finally {
-                isProcessing = false;
+              let scale = 1, offsetX = 0, offsetY = 0;
+              if (canvasAspect > videoAspect) {
+                scale = canvasWidth / videoWidth;
+                offsetY = (videoHeight * scale - canvasHeight) / 2;
+              } else {
+                scale = canvasHeight / videoHeight;
+                offsetX = (videoWidth * scale - canvasWidth) / 2;
               }
-            }
-          },
-          width: isMobile ? 640 : 1280,
-          height: isMobile ? 480 : 720
-        });
 
-        camera.start().then(() => {
-          setIsReady(true);
-        }).catch(() => {
-          setError('Camera start failed. Please allow camera permissions.');
-        });
+              const landmarks = rawLandmarks.map((lm) => ({
+                x: (1 - lm.x) * videoWidth * scale - offsetX,
+                y: lm.y * videoHeight * scale - offsetY,
+                z: lm.z
+              }));
+
+              const indexTip = landmarks[8];
+              handStateRef.current = { position: { x: indexTip.x, y: indexTip.y, z: indexTip.z }, gesture, landmarks };
+              debugRef.current.gesture = gesture;
+              debugRef.current.x = indexTip.x;
+              debugRef.current.y = indexTip.y;
+              debugRef.current.z = indexTip.z;
+              debugRef.current.results++;
+            } else {
+              handStateRef.current = { position: null, gesture: 'NONE', landmarks: undefined };
+              debugRef.current.gesture = 'NONE';
+            }
+          } else if (trackingModeRef.current === 'FACE' && faceLandmarker) {
+            const result = faceLandmarker.detectForVideo(video, now);
+            if (result.faceLandmarks && result.faceLandmarks.length > 0) {
+              const lms = result.faceLandmarks[0] as NormalizedLandmark[];
+              const xs = lms.map(l => l.x);
+              const ys = lms.map(l => l.y);
+              const xMin = Math.min(...xs);
+              const xMax = Math.max(...xs);
+              const yMin = Math.min(...ys);
+              const yMax = Math.max(...ys);
+              faceStateRef.current = {
+                landmarks: lms as any[],
+                boundingBox: { xMin, yMin, xMax, yMax, width: xMax - xMin, height: yMax - yMin }
+              };
+              debugRef.current.results++;
+            } else {
+              faceStateRef.current = { landmarks: null, boundingBox: null };
+            }
+          }
+
+          animFrameId = requestAnimationFrame(processFrame);
+        };
+
+        animFrameId = requestAnimationFrame(processFrame);
 
       } catch (e: any) {
-        setError(e.message || 'Failed to initialize AI core.');
+        if (!stopped) setError('Tracking error: ' + (e?.message || String(e)));
       }
     };
 
-    initTracking();
+    initAndRun();
 
     return () => {
-      if (camera) { camera.stop(); camera = null; }
-      if (hands) { hands.close(); hands = null; }
-      if (faceMesh) { faceMesh.close(); faceMesh = null; }
+      stopped = true;
+      cancelAnimationFrame(animFrameId);
+      handLandmarker?.close();
+      faceLandmarker?.close();
       setIsReady(false);
     };
   }, [isLaunched, videoRef]);

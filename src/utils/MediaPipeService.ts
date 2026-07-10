@@ -1,7 +1,7 @@
-// MediaPipe service wrapper to initialize and run Hands + FaceMesh on a unified camera loop.
+import { HandLandmarker, FaceLandmarker, FilesetResolver, type NormalizedLandmark } from '@mediapipe/tasks-vision';
 import { getHandGesture, type GestureType } from './gestureDetection';
 
-// MediaPipe loaded via npm packages
+const WASM_CDN = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision/wasm';
 
 export interface MediaPipeResults {
   handLandmarks: any[] | null;
@@ -11,10 +11,10 @@ export interface MediaPipeResults {
 }
 
 export class MediaPipeService {
-  private hands: any = null;
-  private faceMesh: any = null;
-  private camera: any = null;
-  private isProcessing = false;
+  private handLandmarker: HandLandmarker | null = null;
+  private faceLandmarker: FaceLandmarker | null = null;
+  private animFrameId = 0;
+  private stopped = false;
   private frameCount = 0;
   private fps = 0;
   private fpsInterval: any = null;
@@ -26,118 +26,91 @@ export class MediaPipeService {
   ) {
     try {
       const isMobile = window.innerWidth < 768;
+      const vision = await FilesetResolver.forVisionTasks(WASM_CDN);
 
-      const [{ Hands }, { FaceMesh }, { Camera }] = await Promise.all([
-        import('@mediapipe/hands'),
-        import('@mediapipe/face_mesh'),
-        import('@mediapipe/camera_utils')
+      [this.handLandmarker, this.faceLandmarker] = await Promise.all([
+        HandLandmarker.createFromOptions(vision, {
+          baseOptions: {
+            modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task',
+            delegate: isMobile ? 'CPU' : 'GPU'
+          },
+          runningMode: 'VIDEO',
+          numHands: 2,
+          minHandDetectionConfidence: 0.6,
+          minHandPresenceConfidence: 0.6,
+          minTrackingConfidence: 0.6
+        }),
+        FaceLandmarker.createFromOptions(vision, {
+          baseOptions: {
+            modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task',
+            delegate: isMobile ? 'CPU' : 'GPU'
+          },
+          runningMode: 'VIDEO',
+          numFaces: 1,
+          minFaceDetectionConfidence: 0.5,
+          minFacePresenceConfidence: 0.5,
+          minTrackingConfidence: 0.5
+        })
       ]);
 
-      // 1. Hands setup
-      this.hands = new Hands({
-        locateFile: (file: string) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
-      });
-      this.hands.setOptions({
-        maxNumHands: 2,
-        modelComplexity: isMobile ? 0 : 1,
-        minDetectionConfidence: 0.6,
-        minTrackingConfidence: 0.6
+      // Wait for video
+      await new Promise<void>((resolve) => {
+        if (videoEl.readyState >= 2) return resolve();
+        videoEl.addEventListener('loadeddata', () => resolve(), { once: true });
       });
 
-      // 2. FaceMesh setup
-      this.faceMesh = new FaceMesh({
-        locateFile: (file: string) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`
-      });
-      this.faceMesh.setOptions({
-        maxNumFaces: 1,
-        refineLandmarks: false,
-        minDetectionConfidence: 0.5,
-        minTrackingConfidence: 0.5
-      });
-
-      let latestHandResults: any = null;
-      let latestFaceResults: any = null;
-
-      this.hands.onResults((results: any) => {
-        latestHandResults = results;
-        this.triggerCallbacks(latestHandResults, latestFaceResults, onResults);
-      });
-
-      this.faceMesh.onResults((results: any) => {
-        latestFaceResults = results;
-        this.triggerCallbacks(latestHandResults, latestFaceResults, onResults);
-      });
-
-      // FPS tracking
       this.fpsInterval = setInterval(() => {
         this.fps = this.frameCount;
         this.frameCount = 0;
       }, 1000);
 
-      // 3. Start Camera Loop
-      this.camera = new Camera(videoEl, {
-        onFrame: async () => {
-          this.frameCount++;
-          if (this.isProcessing) return;
+      const loop = () => {
+        if (this.stopped) return;
 
-          if (videoEl && videoEl.readyState >= 2 && videoEl.videoWidth > 0) {
-            this.isProcessing = true;
-            try {
-              // Send frame to both pipelines in parallel
-              await Promise.all([
-                this.hands.send({ image: videoEl }),
-                this.faceMesh.send({ image: videoEl })
-              ]);
-            } catch (err: any) {
-              console.error("Inference Error:", err);
-            } finally {
-              this.isProcessing = false;
+        if (videoEl.readyState >= 2 && videoEl.videoWidth > 0) {
+          const now = performance.now();
+          this.frameCount++;
+
+          let handLandmarks: any[] | null = null;
+          let gesture: GestureType = 'NONE';
+          let faceLandmarks: any[] | null = null;
+
+          if (this.handLandmarker) {
+            const handResult = this.handLandmarker.detectForVideo(videoEl, now);
+            if (handResult.landmarks && handResult.landmarks.length > 0) {
+              handLandmarks = handResult.landmarks as any[];
+              gesture = getHandGesture(handResult.landmarks[0] as NormalizedLandmark[]);
             }
           }
-        },
-        width: isMobile ? 640 : 1280,
-        height: isMobile ? 480 : 720
-      });
 
-      await this.camera.start();
+          if (this.faceLandmarker) {
+            const faceResult = this.faceLandmarker.detectForVideo(videoEl, now);
+            if (faceResult.faceLandmarks && faceResult.faceLandmarks.length > 0) {
+              faceLandmarks = faceResult.faceLandmarks[0] as any[];
+            }
+          }
+
+          onResults({ handLandmarks, gesture, faceLandmarks, fps: this.fps });
+        }
+
+        this.animFrameId = requestAnimationFrame(loop);
+      };
+
+      this.animFrameId = requestAnimationFrame(loop);
+
     } catch (e: any) {
       onError(e);
       this.stopTracking();
     }
   }
 
-  private triggerCallbacks(
-    handResults: any,
-    faceResults: any,
-    onResults: (results: MediaPipeResults) => void
-  ) {
-    let handLandmarks: any[] | null = null;
-    let gesture: GestureType = 'NONE';
-
-    if (handResults && handResults.multiHandLandmarks && handResults.multiHandLandmarks.length > 0) {
-      handLandmarks = handResults.multiHandLandmarks;
-      // Use primary hand for gesture style selector
-      gesture = getHandGesture(handResults.multiHandLandmarks[0]);
-    }
-
-    let faceLandmarks: any[] | null = null;
-    if (faceResults && faceResults.multiFaceLandmarks && faceResults.multiFaceLandmarks.length > 0) {
-      faceLandmarks = faceResults.multiFaceLandmarks[0];
-    }
-
-    onResults({
-      handLandmarks,
-      gesture,
-      faceLandmarks,
-      fps: this.fps
-    });
-  }
-
   public stopTracking() {
+    this.stopped = true;
     clearInterval(this.fpsInterval);
-    if (this.camera) { this.camera.stop(); this.camera = null; }
-    if (this.hands) { this.hands.close(); this.hands = null; }
-    if (this.faceMesh) { this.faceMesh.close(); this.faceMesh = null; }
-    this.isProcessing = false;
+    cancelAnimationFrame(this.animFrameId);
+    this.handLandmarker?.close();
+    this.faceLandmarker?.close();
+    this.handLandmarker = null;
+    this.faceLandmarker = null;
   }
 }
