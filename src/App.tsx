@@ -24,6 +24,62 @@ import {
   Volume2, VolumeX, Zap, Rainbow, FolderHeart, Repeat, SlidersHorizontal, Share2, Image as ImageIcon, User, Hand, Box
 } from 'lucide-react';
 
+
+import { useFrame } from '@react-three/fiber';
+
+const AnimatedBlock = ({ position, color }: { position: [number, number, number], color: string }) => {
+  const meshRef = useRef<THREE.Mesh>(null!);
+  const [scale, setScale] = useState(0);
+  
+  // Randomize initial rotation slightly so they don't all look identical
+  const [initialRot] = useState(() => [
+    Math.PI / 6 + (Math.random() - 0.5) * 0.5,
+    Math.PI / 4 + (Math.random() - 0.5) * 0.5,
+    0
+  ]);
+
+  useFrame((_state, delta) => {
+    // Spring-like pop-in animation
+    if (scale < 1) {
+      setScale(prev => Math.min(prev + delta * 6, 1)); // Pop in very fast
+    }
+    if (meshRef.current) {
+       // Apply scale (using elastic math could be overkill, simple lerp is fine)
+       // Over-shoot slightly for a "pop" effect
+       const currentScale = scale < 1 ? scale * (1.5 - scale * 0.5) : 1; 
+       meshRef.current.scale.setScalar(currentScale);
+       
+       // Continuous slow rotation for a magical floating feel
+       meshRef.current.rotation.x += delta * 0.5;
+       meshRef.current.rotation.y += delta * 0.3;
+    }
+  });
+
+  return (
+    <mesh ref={meshRef} position={position} rotation={initialRot as any}>
+      <boxGeometry args={[40, 40, 40]} />
+      {/* Premium Glass/Crystal Material */}
+      <meshPhysicalMaterial 
+        color={color} 
+        emissive={color} 
+        emissiveIntensity={1.2} 
+        roughness={0.1}
+        metalness={0.3}
+        transmission={0.6}
+        thickness={2}
+        clearcoat={1}
+        clearcoatRoughness={0.1}
+        transparent 
+        opacity={0.9} 
+      />
+      <lineSegments>
+        <edgesGeometry attach="geometry" args={[new THREE.BoxGeometry(40, 40, 40)]} />
+        <lineBasicMaterial attach="material" color="#ffffff" linewidth={2} transparent opacity={0.6} />
+      </lineSegments>
+    </mesh>
+  );
+};
+
 const COLORS = ['#00f3ff', '#b026ff', '#ff007f', '#39ff14', '#ff8c00', '#ffffff'];
 
 function App() {
@@ -438,41 +494,23 @@ function App() {
             <DrawingCanvas canvasRef={canvasRef} width={dimensions.width} height={dimensions.height} />
 
 
+
             {/* 3D Build Canvas (Perspective overlay) */}
             <div className="absolute inset-0 z-0 pointer-events-none">
               <Canvas camera={{ position: [0, 0, 800], fov: 45 }}>
                 <ambientLight intensity={1.5} />
                 <directionalLight position={[10, 10, 50]} intensity={2.5} />
+                <pointLight position={[-50, -50, 100]} intensity={2} color="#00f3ff" />
                 
                 {builtBlocks.map((b, i) => {
-                  // Map screen coordinates (0..width, 0..height) to WebGL coordinates (-width/2..width/2, height/2..-height/2)
-                  // For a camera at z=800 with fov=45, we need to calculate the actual scale factor
-                  // visible height at z=0 is: 2 * 800 * Math.tan( (45/2) * Math.PI/180 ) = 2 * 800 * 0.414 = 662
-                  // So we scale the screen coordinates to match the 3D world size
                   const scale = 662 / dimensions.height;
                   const x = (b.x - dimensions.width / 2) * scale;
                   const y = -(b.y - dimensions.height / 2) * scale;
-
-                  return (
-                    <mesh key={i} position={[x, y, 0]} rotation={[Math.PI / 6, Math.PI / 4, 0]}>
-                      <boxGeometry args={[40, 40, 40]} />
-                      <meshPhysicalMaterial 
-                        color={b.color} 
-                        emissive={b.color} 
-                        emissiveIntensity={1.2} 
-                        roughness={0.1}
-                        transparent 
-                        opacity={0.85} 
-                      />
-                      <lineSegments>
-                        <edgesGeometry attach="geometry" args={[new THREE.BoxGeometry(40, 40, 40)]} />
-                        <lineBasicMaterial attach="material" color="#ffffff" linewidth={2} transparent opacity={0.5} />
-                      </lineSegments>
-                    </mesh>
-                  )
+                  return <AnimatedBlock key={i} position={[x, y, 0]} color={b.color} />;
                 })}
               </Canvas>
             </div>
+
 
     
       {trackingMode === 'FACE' && <FaceARCanvas faceStateRef={faceStateRef} activeMaskIndex={activeMaskIndex} />}
