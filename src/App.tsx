@@ -3,7 +3,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Canvas } from '@react-three/fiber';
 import * as THREE from 'three';
 import { CameraView } from './components/CameraView';
-import { OrthographicCamera } from '@react-three/drei';
 import { CameraFilters, type CameraFilter } from './components/CameraFilters';
 import { DrawingCanvas } from './components/DrawingCanvas';
 import { Hand3D } from './components/Hand3D';
@@ -438,24 +437,24 @@ function App() {
 
             <DrawingCanvas canvasRef={canvasRef} width={dimensions.width} height={dimensions.height} />
 
-            {/* 3D Build Canvas (Orthographic overlay) */}
+
+            {/* 3D Build Canvas (Perspective overlay) */}
             <div className="absolute inset-0 z-0 pointer-events-none">
-              <Canvas>
-                <OrthographicCamera 
-                  makeDefault 
-                  position={[0, 0, 100]} 
-                  left={0} 
-                  right={dimensions.width} 
-                  top={0} 
-                  bottom={dimensions.height} 
-                  near={0.1} 
-                  far={1000} 
-                />
+              <Canvas camera={{ position: [0, 0, 800], fov: 45 }}>
                 <ambientLight intensity={1.5} />
                 <directionalLight position={[10, 10, 50]} intensity={2.5} />
                 
-                {builtBlocks.map((b, i) => (
-                    <mesh key={i} position={[b.x, dimensions.height - b.y, 0]} rotation={[Math.PI / 6, Math.PI / 4, 0]}>
+                {builtBlocks.map((b, i) => {
+                  // Map screen coordinates (0..width, 0..height) to WebGL coordinates (-width/2..width/2, height/2..-height/2)
+                  // For a camera at z=800 with fov=45, we need to calculate the actual scale factor
+                  // visible height at z=0 is: 2 * 800 * Math.tan( (45/2) * Math.PI/180 ) = 2 * 800 * 0.414 = 662
+                  // So we scale the screen coordinates to match the 3D world size
+                  const scale = 662 / dimensions.height;
+                  const x = (b.x - dimensions.width / 2) * scale;
+                  const y = -(b.y - dimensions.height / 2) * scale;
+
+                  return (
+                    <mesh key={i} position={[x, y, 0]} rotation={[Math.PI / 6, Math.PI / 4, 0]}>
                       <boxGeometry args={[40, 40, 40]} />
                       <meshPhysicalMaterial 
                         color={b.color} 
@@ -470,9 +469,11 @@ function App() {
                         <lineBasicMaterial attach="material" color="#ffffff" linewidth={2} transparent opacity={0.5} />
                       </lineSegments>
                     </mesh>
-                ))}
+                  )
+                })}
               </Canvas>
             </div>
+
     
       {trackingMode === 'FACE' && <FaceARCanvas faceStateRef={faceStateRef} activeMaskIndex={activeMaskIndex} />}
         </>
