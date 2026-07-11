@@ -19,8 +19,6 @@ import { FPSIndicator } from './components/FPSIndicator';
 import { Environments } from './components/Environments';
 import type { EnvMode } from './components/Environments';
 import { audio } from './utils/audio';
-import { TestRunner } from './components/TestRunner';
-import { TestBridge } from './components/TestBridge';
 import { 
   Palette, Eraser, Camera, Trash2, Undo, Video, Bug, 
   Sparkles as SparklesIcon, Gamepad2, Trophy, Flame, Play, X, 
@@ -243,7 +241,6 @@ function App() {
         <div className="fixed inset-0 z-0 pointer-events-auto">
           <Canvas camera={{ position: [0, 0, 8], fov: 45 }}>
             <Environments mode={envMode} combo={gameEngine.combo} />
-            <TestBridge />
             
             {/* Interactive 3D Hand */}
             <Hand3D isMobile={isMobile} handStateRef={handStateRef} />
@@ -378,7 +375,6 @@ function App() {
         <footer className="w-full py-8 text-center text-white/30 text-sm font-medium z-10 pointer-events-none">
           <p>Powered by MediaPipe & WebGL &middot; 2026</p>
         </footer>
-        <TestRunner />
       </div>
     );
   }
@@ -974,7 +970,6 @@ function App() {
           </motion.div>
         )}
       </AnimatePresence>
-      <TestRunner />
     </motion.div>
   );
 }
