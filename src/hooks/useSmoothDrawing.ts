@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react';
 import type { GestureType } from '../utils/gestureDetection';
 
 interface Point { x: number; y: number; z: number; }
-export type DrawMode = 'DRAW' | 'ERASE' | 'POINTER' | 'COSMIC' | 'RAINBOW' | 'FIRE' | 'LASER';
+export type DrawMode = 'DRAW' | 'ERASE' | 'POINTER' | 'COSMIC' | 'RAINBOW' | 'FIRE' | 'LASER' | 'BUILD';
 export type SymmetryMode = 'NONE' | 'HORIZONTAL' | 'RADIAL';
 
 interface DrawOptions {

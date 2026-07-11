@@ -1,7 +1,9 @@
 import { useRef, useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Canvas } from '@react-three/fiber';
+import * as THREE from 'three';
 import { CameraView } from './components/CameraView';
+import { OrthographicCamera } from '@react-three/drei';
 import { CameraFilters, type CameraFilter } from './components/CameraFilters';
 import { DrawingCanvas } from './components/DrawingCanvas';
 import { Hand3D } from './components/Hand3D';
@@ -20,7 +22,7 @@ import { audio } from './utils/audio';
 import { 
   Palette, Eraser, Camera, Trash2, Undo, Video, Bug, 
   Sparkles as SparklesIcon, Gamepad2, Trophy, Flame, Play, X, 
-  Volume2, VolumeX, Zap, Rainbow, FolderHeart, Repeat, SlidersHorizontal, Share2, Image as ImageIcon, User, Hand
+  Volume2, VolumeX, Zap, Rainbow, FolderHeart, Repeat, SlidersHorizontal, Share2, Image as ImageIcon, User, Hand, Box
 } from 'lucide-react';
 
 const COLORS = ['#00f3ff', '#b026ff', '#ff007f', '#39ff14', '#ff8c00', '#ffffff'];
@@ -50,6 +52,8 @@ function App() {
   const [cameraFilter, setCameraFilter] = useState<CameraFilter>('NORMAL');
   const [showFilterToast, setShowFilterToast] = useState(false);
   const lastGestureRef = useRef<string | null>(null);
+
+
   
         
   const [isRecording, setIsRecording] = useState(false);
@@ -108,6 +112,23 @@ function App() {
   };
 
   const { isReady, error, handStateRef, faceStateRef, debugInfo } = useARTracking(videoRef, dimensions.width, dimensions.height, isLaunched && activeTab === 'DRAW', trackingMode);
+  const [builtBlocks, setBuiltBlocks] = useState<{x: number, y: number, z: number, color: string}[]>([]);
+  const lastBlockPosRef = useRef<{x: number, y: number, z: number} | null>(null);
+
+  useEffect(() => {
+    if (activeTab !== 'DRAW' || mode !== 'BUILD') return;
+    const state = handStateRef.current;
+    if (state.gesture === 'OK' && state.position) {
+      const dist = lastBlockPosRef.current ? Math.hypot(state.position.x - lastBlockPosRef.current.x, state.position.y - lastBlockPosRef.current.y) : 999;
+      if (dist > 45) {
+        setBuiltBlocks(prev => [...prev, { x: state.position!.x, y: state.position!.y, z: state.position!.z, color }]);
+        lastBlockPosRef.current = { ...state.position };
+        audio.playHover();
+      }
+    } else {
+      lastBlockPosRef.current = null;
+    }
+  }, [debugInfo.frames, mode, activeTab, color]);
   const gameEngine = useGameEngine();
   const { clearCanvas, saveToGallery, undo } = useSmoothDrawing(canvasRef, handStateRef, { color, size, glow, mode, symmetry }, gameEngine, videoRef, showPreview);
 
@@ -183,7 +204,7 @@ function App() {
         return; // Skip shortcuts when user is typing in input fields
       }
       const key = e.key.toLowerCase();
-      if (key === 'c') clearCanvas();
+      if (key === 'c') clearCanvas(); setBuiltBlocks([]);
       if (key === 'z' || (e.ctrlKey && key === 'z')) undo();
       if (key === 'e') setMode('ERASE');
       if (key === 'd') setMode('DRAW');
@@ -416,6 +437,43 @@ function App() {
       
 
             <DrawingCanvas canvasRef={canvasRef} width={dimensions.width} height={dimensions.height} />
+
+            {/* 3D Build Canvas (Orthographic overlay) */}
+            <div className="absolute inset-0 z-0 pointer-events-none">
+              <Canvas>
+                <OrthographicCamera 
+                  makeDefault 
+                  position={[0, 0, 100]} 
+                  left={0} 
+                  right={dimensions.width} 
+                  top={0} 
+                  bottom={dimensions.height} 
+                  near={0.1} 
+                  far={1000} 
+                />
+                <ambientLight intensity={1.5} />
+                <directionalLight position={[10, 10, 50]} intensity={2.5} />
+                
+                {builtBlocks.map((b, i) => (
+                    <mesh key={i} position={[b.x, dimensions.height - b.y, 0]}>
+                      <boxGeometry args={[40, 40, 40]} />
+                      <meshPhysicalMaterial 
+                        color={b.color} 
+                        emissive={b.color} 
+                        emissiveIntensity={1.2} 
+                        roughness={0.1}
+                        transparent 
+                        opacity={0.85} 
+                      />
+                      <lineSegments>
+                        <edgesGeometry attach="geometry" args={[new THREE.BoxGeometry(40, 40, 40)]} />
+                        <lineBasicMaterial attach="material" color="#ffffff" linewidth={2} transparent opacity={0.5} />
+                      </lineSegments>
+                    </mesh>
+                ))}
+              </Canvas>
+            </div>
+    
       {trackingMode === 'FACE' && <FaceARCanvas faceStateRef={faceStateRef} activeMaskIndex={activeMaskIndex} />}
         </>
       ) : (
@@ -737,6 +795,17 @@ function App() {
               </span>
             )}
           </button>
+
+            {/* BUILD Tool */}
+            <button
+              onClick={() => { setMode('BUILD'); audio.playClick(); }}
+              onMouseEnter={handleHover}
+              className={`shrink-0 p-3 rounded-full transition-all ${mode === 'BUILD' ? 'bg-[#00f3ff]/20 text-[#00f3ff] shadow-[0_0_15px_rgba(0,243,255,0.5)] border border-[#00f3ff]/50' : 'bg-white/5 text-white/50 hover:bg-white/10 hover:text-white border border-white/10'}`}
+              title="Build Blocks (OK Gesture)"
+            >
+              <Box size={20} />
+            </button>
+    
           
           <div className="hidden md:block w-px h-8 bg-white/10 mx-2"></div>
           
@@ -744,7 +813,7 @@ function App() {
           <button onClick={() => { audio.playClick(); undo(); }} onMouseEnter={handleHover} className="shrink-0 p-3 rounded-full text-white/50 hover:text-white hover:bg-white/5 transition-all" title="Undo (Z)">
             <Undo size={20} />
           </button>
-          <button onClick={() => { audio.playClick(); clearCanvas(); }} onMouseEnter={handleHover} className="shrink-0 p-3 rounded-full text-white/50 hover:text-red-400 hover:bg-red-500/10 transition-all" title="Clear (C)">
+          <button onClick={() => { audio.playClick(); clearCanvas(); setBuiltBlocks([]); }} onMouseEnter={handleHover} className="shrink-0 p-3 rounded-full text-white/50 hover:text-red-400 hover:bg-red-500/10 transition-all" title="Clear (C)">
             <Trash2 size={20} />
           </button>
           <button onClick={handleSaveToGallery} onMouseEnter={handleHover} className="shrink-0 p-3 rounded-full text-white/50 hover:text-[#39ff14] hover:bg-white/5 transition-all" title="Save to Local Gallery">
