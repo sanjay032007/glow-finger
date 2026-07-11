@@ -455,7 +455,7 @@ function App() {
                 <directionalLight position={[10, 10, 50]} intensity={2.5} />
                 
                 {builtBlocks.map((b, i) => (
-                    <mesh key={i} position={[b.x, dimensions.height - b.y, 0]}>
+                    <mesh key={i} position={[b.x, dimensions.height - b.y, 0]} rotation={[Math.PI / 6, Math.PI / 4, 0]}>
                       <boxGeometry args={[40, 40, 40]} />
                       <meshPhysicalMaterial 
                         color={b.color} 
