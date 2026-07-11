@@ -8,7 +8,6 @@ import { AIGestureCameraView } from './AIGestureCameraView';
 import { GestureOverlay } from './GestureOverlay';
 import { GestureHUD } from './GestureHUD';
 import { StyleSelector, STYLE_MAP } from './StyleSelector';
-import { FaceTracker } from './FaceTracker';
 import { GestureDetector } from './GestureDetector';
 import { StyleTransfer } from './StyleTransfer';
 import { type GestureType } from '../utils/gestureDetection';
@@ -33,7 +32,6 @@ export const AIGestureStudio: React.FC = () => {
   const [capturedFrame, setCapturedFrame] = useState<string | null>(null);
   const [isFlashing, setIsFlashing] = useState(false);
 
-  const [showFaceMesh, setShowFaceMesh] = useState(true);
 
   const videoRef = useRef<HTMLVideoElement>(null!);
   const mediaPipeServiceRef = useRef<MediaPipeService | null>(null);
@@ -237,8 +235,6 @@ export const AIGestureStudio: React.FC = () => {
                   {isCameraActive && (
                     <GestureOverlay 
                       handLandmarks={trackingResults.handLandmarks}
-                      faceLandmarks={trackingResults.faceLandmarks}
-                      showFaceMesh={showFaceMesh}
                       activeColor={activeColor}
                     />
                   )}
@@ -262,11 +258,6 @@ export const AIGestureStudio: React.FC = () => {
                     captureProgress={captureProgress}
                     fps={trackingResults.fps}
                     activeColor={activeColor}
-                  />
-                  <FaceTracker 
-                    showFaceMesh={showFaceMesh}
-                    setShowFaceMesh={setShowFaceMesh}
-                    faceDetected={trackingResults.faceLandmarks !== null}
                   />
                 </>
               )}

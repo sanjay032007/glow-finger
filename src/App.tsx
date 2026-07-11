@@ -10,7 +10,6 @@ import { MiniDrawCanvas } from './components/MiniDrawCanvas';
 import { GallerySection } from './components/GallerySection';
 import { Leaderboard } from './components/Leaderboard';
 import { useARTracking } from './hooks/useARTracking';
-import { FaceARCanvas } from './components/FaceARCanvas';
 import { AIGestureStudio } from './components/AIGestureStudio';
 import { useSmoothDrawing, type DrawMode, type SymmetryMode } from './hooks/useSmoothDrawing';
 import { useGameEngine } from './hooks/useGameEngine';
@@ -86,6 +85,7 @@ function App() {
   const [isLaunched, setIsLaunched] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null!);
   const canvasRef = useRef<HTMLCanvasElement>(null!);
+  const cursorCanvasRef = useRef<HTMLCanvasElement>(null!);
   
   const [dimensions, setDimensions] = useState({ width: window.innerWidth, height: window.innerHeight });
   const [color, setColor] = useState(COLORS[0]);
@@ -166,26 +166,37 @@ function App() {
     });
   };
 
-  const { isReady, error, handStateRef, faceStateRef, debugInfo } = useARTracking(videoRef, dimensions.width, dimensions.height, isLaunched && activeTab === 'DRAW', trackingMode);
+  const { isReady, error, handStateRef, debugInfo } = useARTracking(
+    videoRef, 
+    dimensions.width, 
+    dimensions.height, 
+    isLaunched
+  );
   const [builtBlocks, setBuiltBlocks] = useState<{x: number, y: number, z: number, color: string}[]>([]);
   const lastBlockPosRef = useRef<{x: number, y: number, z: number} | null>(null);
 
   useEffect(() => {
     if (activeTab !== 'DRAW' || mode !== 'BUILD') return;
-    const state = handStateRef.current;
-    if (state.gesture === 'OK' && state.position) {
-      const dist = lastBlockPosRef.current ? Math.hypot(state.position.x - lastBlockPosRef.current.x, state.position.y - lastBlockPosRef.current.y) : 999;
-      if (dist > 45) {
-        setBuiltBlocks(prev => [...prev, { x: state.position!.x, y: state.position!.y, z: state.position!.z, color }]);
-        lastBlockPosRef.current = { ...state.position };
-        audio.playHover();
+    let animId: number;
+    const loop = () => {
+      const state = handStateRef.current;
+      if (state.gesture === 'OK' && state.position) {
+        const dist = lastBlockPosRef.current ? Math.hypot(state.position.x - lastBlockPosRef.current.x, state.position.y - lastBlockPosRef.current.y) : 999;
+        if (dist > 45) {
+          setBuiltBlocks(prev => [...prev, { x: state.position!.x, y: state.position!.y, z: state.position!.z, color }]);
+          lastBlockPosRef.current = { ...state.position };
+          audio.playHover();
+        }
+      } else {
+        lastBlockPosRef.current = null;
       }
-    } else {
-      lastBlockPosRef.current = null;
-    }
-  }, [debugInfo.frames, mode, activeTab, color]);
+      animId = requestAnimationFrame(loop);
+    };
+    animId = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(animId);
+  }, [mode, activeTab, color]);
   const gameEngine = useGameEngine();
-  const { clearCanvas, saveToGallery, undo } = useSmoothDrawing(canvasRef, handStateRef, { color, size, glow, mode, symmetry }, gameEngine, videoRef, showPreview);
+  const { clearCanvas, saveToGallery, undo } = useSmoothDrawing(canvasRef, cursorCanvasRef, handStateRef, { color, size, glow, mode, symmetry }, gameEngine, videoRef, showPreview);
 
   
   // Cycle camera filter on gestures
@@ -491,7 +502,7 @@ function App() {
 
       
 
-            <DrawingCanvas canvasRef={canvasRef} width={dimensions.width} height={dimensions.height} />
+            <DrawingCanvas canvasRef={canvasRef} cursorCanvasRef={cursorCanvasRef} width={dimensions.width} height={dimensions.height} />
 
 
 
@@ -513,7 +524,7 @@ function App() {
 
 
     
-      {trackingMode === 'FACE' && <FaceARCanvas faceStateRef={faceStateRef} activeMaskIndex={activeMaskIndex} />}
+      
         </>
       ) : (
         <AIGestureStudio />

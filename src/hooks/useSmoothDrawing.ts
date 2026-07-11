@@ -26,6 +26,7 @@ interface Particle {
 
 export const useSmoothDrawing = (
   canvasRef: React.RefObject<HTMLCanvasElement>,
+  cursorCanvasRef: React.RefObject<HTMLCanvasElement>,
   handStateRef: React.MutableRefObject<{ position: Point | null; gesture: GestureType; landmarks?: any[] }>,
   options: DrawOptions,
   gameEngine?: any,
@@ -36,7 +37,6 @@ export const useSmoothDrawing = (
   const isDrawingRef = useRef(false);
   const undoStackRef = useRef<ImageData[]>([]);
   const particlesRef = useRef<Particle[]>([]);
-  const cursorCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const posHistoryRef = useRef<Point[]>([]);
   const smoothedPosRef = useRef<Point | null>(null);
   const prevGameModeRef = useRef(false);

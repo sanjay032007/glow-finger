@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { HandLandmarker, FaceLandmarker, FilesetResolver, type NormalizedLandmark } from '@mediapipe/tasks-vision';
+import { HandLandmarker, FilesetResolver, type NormalizedLandmark } from '@mediapipe/tasks-vision';
 import { getHandGesture, type GestureType } from '../utils/gestureDetection';
 
 interface Point { x: number; y: number; z: number; }
@@ -10,19 +10,13 @@ export interface HandState {
   landmarks?: any[];
 }
 
-export interface FaceState {
-  landmarks: any[] | null;
-  boundingBox: { xMin: number, yMin: number, xMax: number, yMax: number, width: number, height: number } | null;
-}
-
 const WASM_CDN = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision/wasm';
 
 export const useARTracking = (
   videoRef: React.RefObject<HTMLVideoElement>,
   canvasWidth: number,
   canvasHeight: number,
-  isLaunched: boolean,
-  trackingMode: 'HANDS' | 'FACE'
+  isLaunched: boolean
 ) => {
   const [isReady, setIsReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -30,7 +24,6 @@ export const useARTracking = (
   const debugRef = useRef({ frames: 0, results: 0, gesture: 'NONE', x: 0, y: 0, z: 0 });
 
   const handStateRef = useRef<HandState>({ position: null, gesture: 'NONE' });
-  const faceStateRef = useRef<FaceState>({ landmarks: null, boundingBox: null });
 
   useEffect(() => {
     if (!isLaunched) return;
@@ -38,16 +31,10 @@ export const useARTracking = (
     return () => clearInterval(updateDebug);
   }, [isLaunched]);
 
-  const trackingModeRef = useRef(trackingMode);
-  useEffect(() => {
-    trackingModeRef.current = trackingMode;
-  }, [trackingMode]);
-
   useEffect(() => {
     if (!isLaunched || !videoRef.current) return;
 
     let handLandmarker: HandLandmarker | null = null;
-    let faceLandmarker: FaceLandmarker | null = null;
     let animFrameId: number;
     let stopped = false;
 
@@ -56,31 +43,17 @@ export const useARTracking = (
         const isMobile = window.innerWidth < 768;
         const vision = await FilesetResolver.forVisionTasks(WASM_CDN);
 
-        // Initialize both models in parallel using the same vision WASM env
-        [handLandmarker, faceLandmarker] = await Promise.all([
-          HandLandmarker.createFromOptions(vision, {
-            baseOptions: {
-              modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task',
-              delegate: 'GPU'
-            },
-            runningMode: 'VIDEO',
-            numHands: 1,
-            minHandDetectionConfidence: 0.6,
-            minHandPresenceConfidence: 0.6,
-            minTrackingConfidence: 0.6
-          }),
-          FaceLandmarker.createFromOptions(vision, {
-            baseOptions: {
-              modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task',
-              delegate: 'GPU'
-            },
-            runningMode: 'VIDEO',
-            numFaces: 1,
-            minFaceDetectionConfidence: 0.5,
-            minFacePresenceConfidence: 0.5,
-            minTrackingConfidence: 0.5
-          })
-        ]);
+        handLandmarker = await HandLandmarker.createFromOptions(vision, {
+          baseOptions: {
+            modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task',
+            delegate: 'GPU'
+          },
+          runningMode: 'VIDEO',
+          numHands: 1,
+          minHandDetectionConfidence: 0.6,
+          minHandPresenceConfidence: 0.6,
+          minTrackingConfidence: 0.6
+        });
 
         // Start the camera stream using standard browser APIs
         const video = videoRef.current!;
@@ -103,7 +76,7 @@ export const useARTracking = (
 
         setIsReady(true);
 
-        // Inference loop (requestAnimationFrame — zero busy-wait)
+        // Inference loop
         const processFrame = () => {
           if (stopped) return;
           const video = videoRef.current;
@@ -115,7 +88,7 @@ export const useARTracking = (
           const now = performance.now();
           debugRef.current.frames++;
 
-          if (trackingModeRef.current === 'HANDS' && handLandmarker) {
+          if (handLandmarker) {
             const result = handLandmarker.detectForVideo(video, now);
             if (result.landmarks && result.landmarks.length > 0) {
               const rawLandmarks = result.landmarks[0] as NormalizedLandmark[];
@@ -152,24 +125,6 @@ export const useARTracking = (
               handStateRef.current = { position: null, gesture: 'NONE', landmarks: undefined };
               debugRef.current.gesture = 'NONE';
             }
-          } else if (trackingModeRef.current === 'FACE' && faceLandmarker) {
-            const result = faceLandmarker.detectForVideo(video, now);
-            if (result.faceLandmarks && result.faceLandmarks.length > 0) {
-              const lms = result.faceLandmarks[0] as NormalizedLandmark[];
-              const xs = lms.map(l => l.x);
-              const ys = lms.map(l => l.y);
-              const xMin = Math.min(...xs);
-              const xMax = Math.max(...xs);
-              const yMin = Math.min(...ys);
-              const yMax = Math.max(...ys);
-              faceStateRef.current = {
-                landmarks: lms as any[],
-                boundingBox: { xMin, yMin, xMax, yMax, width: xMax - xMin, height: yMax - yMin }
-              };
-              debugRef.current.results++;
-            } else {
-              faceStateRef.current = { landmarks: null, boundingBox: null };
-            }
           }
 
           animFrameId = requestAnimationFrame(processFrame);
@@ -188,7 +143,6 @@ export const useARTracking = (
       stopped = true;
       cancelAnimationFrame(animFrameId);
       handLandmarker?.close();
-      faceLandmarker?.close();
       
       // Stop all tracks in the camera stream to turn off the camera light
       if (videoRef.current && videoRef.current.srcObject) {
@@ -198,7 +152,7 @@ export const useARTracking = (
       }
       setIsReady(false);
     };
-  }, [isLaunched, videoRef]);
+  }, [isLaunched, videoRef, canvasWidth, canvasHeight]);
 
-  return { isReady, error, handStateRef, faceStateRef, debugInfo };
+  return { isReady, error, handStateRef, debugInfo };
 };

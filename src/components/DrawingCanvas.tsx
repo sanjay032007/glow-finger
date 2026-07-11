@@ -2,6 +2,7 @@
 
 interface DrawingCanvasProps {
   canvasRef: React.RefObject<HTMLCanvasElement>;
+  cursorCanvasRef?: React.RefObject<HTMLCanvasElement>;
   width: number;
   height: number;
 }
