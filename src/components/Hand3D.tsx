@@ -1,4 +1,4 @@
-import { useRef, useEffect, useMemo, useState } from 'react';
+import { useRef, useEffect, useMemo } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { useGLTF, Float, Center, Torus, ContactShadows } from '@react-three/drei';
 import * as THREE from 'three';
@@ -26,8 +26,7 @@ interface SpawnedBlock {
 
 export function Hand3D({ isMobile, handStateRef }: { isMobile: boolean; handStateRef?: React.RefObject<any> }) {
   const { scene } = useGLTF('/right.glb');
-  const [blocks, setBlocks] = useState<SpawnedBlock[]>([]);
-  const group = useRef<THREE.Group>(null!);
+    const group = useRef<THREE.Group>(null!);
   // Spawned Blocks physics state
   const spawnedBlocksRef = useRef<SpawnedBlock[]>([]);
   const lastSpawnTimeRef = useRef(0);
@@ -41,24 +40,7 @@ export function Hand3D({ isMobile, handStateRef }: { isMobile: boolean; handStat
     z: number;
   }[]>([]);
 
-  const voxelData = useMemo(() => {
-    const list = [];
-    const size = 0.55;
-    const countX = 4; // 9x9 grid centered under the hand
-    const countZ = 4;
-    for (let x = -countX; x <= countX; x++) {
-      for (let z = -countZ; z <= countZ; z++) {
-        list.push({
-          id: `${x}_${z}`,
-          x: x * (size + 0.08),
-          z: z * (size + 0.08),
-          baselineY: -2.3 // Placed right above the floor grid
-        });
-      }
-    }
-    return list;
-  }, []);
-  const ring1 = useRef<THREE.Mesh>(null!);
+    const ring1 = useRef<THREE.Mesh>(null!);
   const ring2 = useRef<THREE.Mesh>(null!);
   const lightRef = useRef<THREE.PointLight>(null!);
   
@@ -520,8 +502,7 @@ export function Hand3D({ isMobile, handStateRef }: { isMobile: boolean; handStat
             lastSpawnTimeRef.current = nowTime;
             
             // Update React state so R3F renders the new block
-            setBlocks([...spawnedBlocksRef.current]);
-          }
+                      }
         }
       }
     }
@@ -567,8 +548,7 @@ export function Hand3D({ isMobile, handStateRef }: { isMobile: boolean; handStat
     });
 
     if (stateChanged) {
-      setBlocks([...spawnedBlocksRef.current]);
-    }
+          }
 
     // 8. Voxel Grid Interaction (Calculate distance from each block to closest fingertip)
     const tipsWorldPos = bonesRef.current.tips.map((bone) => {
@@ -705,70 +685,6 @@ export function Hand3D({ isMobile, handStateRef }: { isMobile: boolean; handStat
           blending={THREE.AdditiveBlending}
         />
       </points>
-
-      {/* Dynamic Stacking Blocks */}
-      {blocks.map((block: SpawnedBlock) => {
-        const size = 0.55;
-        const posX = block.gridX * (size + 0.08) + handX;
-        const posZ = block.gridZ * (size + 0.08);
-        return (
-          <group key={block.id} position={[posX, block.y, posZ]}>
-            <mesh>
-              <boxGeometry args={[0.55, 0.55, 0.55]} />
-              <meshPhysicalMaterial
-                color={block.color}
-                emissive={block.color}
-                emissiveIntensity={block.isSnapped ? 0.3 : 1.5} // glows brighter when falling!
-                roughness={0.15}
-                metalness={0.7}
-                transparent
-                opacity={0.9}
-              />
-              <lineSegments>
-                <edgesGeometry attach="geometry" args={[new THREE.BoxGeometry(0.55, 0.55, 0.55)]} />
-                <lineBasicMaterial attach="material" color={block.color} linewidth={2} />
-              </lineSegments>
-            </mesh>
-          </group>
-        );
-      })}
-
-      {/* Voxel Grid (Interacts dynamically with fingers) */}
-      {voxelData.map((data, idx) => (
-        <group key={data.id} position={[data.x + handX, 0, data.z]}>
-          <mesh
-            ref={(el) => {
-              if (el) {
-                voxelsRef.current[idx] = {
-                  mesh: el as THREE.Mesh,
-                  baselineY: data.baselineY,
-                  x: data.x,
-                  z: data.z
-                };
-              }
-            }}
-            position={[0, data.baselineY, 0]}
-          >
-            <boxGeometry args={[0.55, 0.55, 0.55]} />
-            <meshPhysicalMaterial
-              color="#00f3ff"
-              emissive="#00f3ff"
-              emissiveIntensity={0.15}
-              roughness={0.1}
-              metalness={0.8}
-              transparent
-              opacity={0.85}
-              transmission={0.4}
-              thickness={0.5}
-            />
-            {/* Outline box segments to match voxel grid look in prompt image */}
-            <lineSegments>
-              <edgesGeometry attach="geometry" args={[new THREE.BoxGeometry(0.55, 0.55, 0.55)]} />
-              <lineBasicMaterial attach="material" color="#00f3ff" linewidth={1.5} />
-            </lineSegments>
-          </mesh>
-        </group>
-      ))}
 
       {/* Soft ground contact shadow for anchoring */}
       <ContactShadows 
