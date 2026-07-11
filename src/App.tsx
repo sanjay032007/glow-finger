@@ -1,8 +1,10 @@
 import { useRef, useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Canvas } from '@react-three/fiber';
 import { CameraView } from './components/CameraView';
 import { CameraFilters, type CameraFilter } from './components/CameraFilters';
 import { DrawingCanvas } from './components/DrawingCanvas';
+import { Hand3D } from './components/Hand3D';
 import { MiniDrawCanvas } from './components/MiniDrawCanvas';
 import { GallerySection } from './components/GallerySection';
 import { Leaderboard } from './components/Leaderboard';
@@ -22,7 +24,6 @@ import {
 } from 'lucide-react';
 
 const COLORS = ['#00f3ff', '#b026ff', '#ff007f', '#39ff14', '#ff8c00', '#ffffff'];
-
 
 function App() {
   const [isLaunched, setIsLaunched] = useState(false);
@@ -58,7 +59,6 @@ function App() {
   useEffect(() => {
     const handleResize = () => {
       setDimensions({ width: window.innerWidth, height: window.innerHeight });
-      
     };
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
@@ -219,7 +219,16 @@ function App() {
           />
         </div>
 
-        
+        {/* 3D Background & Hand Canvas with Post-Processing Bloom */}
+        <div className="fixed inset-0 z-0 pointer-events-auto">
+          <Canvas camera={{ position: [0, 0, 8], fov: 45 }}>
+            
+            {/* Interactive 3D Hand */}
+            <Hand3D isMobile={false} handStateRef={handStateRef} />
+
+            
+          </Canvas>
+        </div>
 
         {/* Grid Overlay */}
         <div className="absolute inset-0 z-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImdyaWQiIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdHRlcm4gaWQ9InNtYWxsR3JpZCIgd2lkdGg9IjEwIiBoZWlnaHQ9IjEwIiBwYXR0ZXJuVW5pdHM9InVzZXJTcGFjZU9uVXNlIj48cGF0aCBkPSJNMTAgMEwwIDBMMCAxMCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJyZ2JhKDI1NSwyNTUsMjU1LDAuMDMiIHN0cm9rZS13aWR0aD0iMSIvPjwvcGF0dGVybj48cmVjdCB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIGZpbGw9InVybCgjc21hbGxHcmlkKSIvPjxwYXRoIGQ9Ik00MCAwTDAgMEwwIDQwIiBmaWxsPSJub25lIiBzdHJva2U9InJnYmEoMjU1LDI1NSwyNTUsMC4wNSkiIHN0cm9rZS13aWR0aD0iMSIvPjwvcGF0dGVybj48L2RlZnM+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0idXJsKCNncmlkKSIvPjwvc3ZnPg==')] opacity-30 pointer-events-none"></div>
