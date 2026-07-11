@@ -16,7 +16,6 @@ import { useSmoothDrawing, type DrawMode, type SymmetryMode } from './hooks/useS
 import { useGameEngine } from './hooks/useGameEngine';
 import { Onboarding } from './components/Onboarding';
 import { FPSIndicator } from './components/FPSIndicator';
-import { Environments } from './components/Environments';
 import type { EnvMode } from './components/Environments';
 import { audio } from './utils/audio';
 import { 
@@ -240,7 +239,6 @@ function App() {
         {/* 3D Background & Hand Canvas with Post-Processing Bloom */}
         <div className="fixed inset-0 z-0 pointer-events-auto">
           <Canvas camera={{ position: [0, 0, 8], fov: 45 }}>
-            <Environments mode={envMode} combo={gameEngine.combo} />
             
             {/* Interactive 3D Hand */}
             <Hand3D isMobile={isMobile} handStateRef={handStateRef} />
@@ -433,17 +431,7 @@ function App() {
       <CameraFilters />
       <CameraView videoRef={videoRef} showPreview={showPreview} cameraFilter={cameraFilter} />
 
-      {/* 3D AR Layer: Interactive Hand & Voxel Blocks overlaying the camera feed */}
-      {trackingMode === 'HANDS' && (
-        <div className="absolute inset-0 z-20 pointer-events-none">
-          <Canvas camera={{ position: [0, 0, 8], fov: 45 }}>
-            <ambientLight intensity={0.8} />
-            <pointLight position={[10, 10, 10]} intensity={1.5} />
-            
-            <Hand3D isMobile={isMobile} handStateRef={handStateRef} />
-          </Canvas>
-        </div>
-      )}
+      
 
             <DrawingCanvas canvasRef={canvasRef} width={dimensions.width} height={dimensions.height} />
       {trackingMode === 'FACE' && <FaceARCanvas faceStateRef={faceStateRef} activeMaskIndex={activeMaskIndex} />}
