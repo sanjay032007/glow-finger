@@ -49,8 +49,8 @@ const AnimatedBlock = ({ position, color }: { position: [number, number, number]
        meshRef.current.scale.setScalar(currentScale);
        
        // Continuous slow rotation for a magical floating feel
-       meshRef.current.rotation.x += delta * 0.5;
-       meshRef.current.rotation.y += delta * 0.3;
+       // meshRef.current.rotation.x += delta * 0.5;
+       // meshRef.current.rotation.y += delta * 0.3;
     }
   });
 
@@ -98,7 +98,6 @@ function App() {
   const [isAudioEnabled, setIsAudioEnabled] = useState(false);
   const [envMode, setEnvMode] = useState<EnvMode>('NEON');
   const [trackingMode, setTrackingMode] = useState<'HANDS'|'FACE'>('HANDS');
-  const [activeMaskIndex, setActiveMaskIndex] = useState(0);
   
   const [showSliders, setShowSliders] = useState(false);
   const [activeTab, setActiveTab] = useState<'DRAW' | 'STUDIO'>('DRAW');
@@ -204,12 +203,7 @@ function App() {
     if (!debugInfo.gesture) return;
     
     if (debugInfo.gesture === 'PEACE' && lastGestureRef.current !== 'PEACE') {
-      if (trackingMode === 'FACE') {
-        setActiveMaskIndex(prev => (prev + 1) % 3);
-        setShowFilterToast(true);
-        audio.playHover();
-        setTimeout(() => setShowFilterToast(false), 2000);
-      } else {
+      
 
       const filters: CameraFilter[] = ['NORMAL', 'NEON', 'POP_ART', 'ANIME', 'VAN_GOGH', 'PAPER'];
       setCameraFilter(prev => {
@@ -219,7 +213,6 @@ function App() {
       setShowFilterToast(true);
       audio.playHover();
       setTimeout(() => setShowFilterToast(false), 2000);
-      }
     }
     
     lastGestureRef.current = debugInfo.gesture;
@@ -489,7 +482,7 @@ function App() {
             exit={{ opacity: 0, y: -20, x: '-50%' }}
             className="absolute top-24 left-1/2 z-50 bg-[#b026ff]/90 text-white font-bold px-6 py-2 rounded-full shadow-[0_0_20px_rgba(176,38,255,0.6)] backdrop-blur-md pointer-events-none"
           >
-            {trackingMode === 'FACE' ? `Mask Changed: ${['Cyberpunk Visor', 'Holographic HUD', 'Anime Style'][activeMaskIndex]}` : `Filter Changed: ${cameraFilter}`}
+            { `Filter Changed: ${cameraFilter}`}
           </motion.div>
         )}
       </AnimatePresence>
@@ -592,8 +585,8 @@ function App() {
             animate={{ y: 0, opacity: 1 }}
             className="absolute top-8 left-1/2 -translate-x-1/2 z-40 bg-[#131317]/80 backdrop-blur-2xl border border-white/10 rounded-full p-1.5 flex gap-1 transition-all duration-300"
             style={{
-              boxShadow: `0 20px 40px rgba(0,0,0,0.5), 0 0 20px ${trackingMode === 'HANDS' ? '#00f3ff' : '#ff007f'}1a`,
-              borderColor: `${trackingMode === 'HANDS' ? '#00f3ff' : '#ff007f'}33`
+              boxShadow: `0 20px 40px rgba(0,0,0,0.5), 0 0 20px ${'#00f3ff'}1a`,
+              borderColor: `${'#00f3ff'}33`
             }}
           >
             <button
