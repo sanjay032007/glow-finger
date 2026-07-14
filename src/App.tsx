@@ -555,11 +555,7 @@ function App() {
                   const y = b.gy * 40;
                   return <AnimatedBlock key={i} position={[x, y, 0]} color={b.color} />;
                 })}
-                <gridHelper 
-                  args={[2000, 50, '#004455', '#11151a']} 
-                  rotation={[Math.PI / 2, 0, 0]} 
-                  position={[0, 0, -21]}
-                />
+                
               </Canvas>
             </div>
 
