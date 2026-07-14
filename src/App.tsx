@@ -1,3 +1,4 @@
+import { RoundedBox } from '@react-three/drei';
 import { useRef, useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Canvas } from '@react-three/fiber';
@@ -20,7 +21,7 @@ import { audio } from './utils/audio';
 import { 
   Palette, Eraser, Camera, Trash2, Undo, Video, Bug, 
   Sparkles as SparklesIcon, Gamepad2, Trophy, Flame, Play, X, 
-  Volume2, VolumeX, Zap, Rainbow, FolderHeart, Repeat, SlidersHorizontal, Share2, Image as ImageIcon, User, Hand, Box
+  Volume2, VolumeX, Zap, Rainbow, FolderHeart, Repeat, SlidersHorizontal, Share2, Image as ImageIcon, Box
 } from 'lucide-react';
 
 
@@ -29,53 +30,39 @@ import { useFrame } from '@react-three/fiber';
 const AnimatedBlock = ({ position, color }: { position: [number, number, number], color: string }) => {
   const meshRef = useRef<THREE.Mesh>(null!);
   const [scale, setScale] = useState(0);
-  
-  // Randomize initial rotation slightly so they don't all look identical
-  const [initialRot] = useState(() => [
-    Math.PI / 6 + (Math.random() - 0.5) * 0.5,
-    Math.PI / 4 + (Math.random() - 0.5) * 0.5,
-    0
-  ]);
 
   useFrame((_state, delta) => {
-    // Spring-like pop-in animation
     if (scale < 1) {
-      setScale(prev => Math.min(prev + delta * 6, 1)); // Pop in very fast
+      setScale(prev => Math.min(prev + delta * 6, 1));
     }
     if (meshRef.current) {
-       // Apply scale (using elastic math could be overkill, simple lerp is fine)
-       // Over-shoot slightly for a "pop" effect
        const currentScale = scale < 1 ? scale * (1.5 - scale * 0.5) : 1; 
        meshRef.current.scale.setScalar(currentScale);
-       
-       // Continuous slow rotation for a magical floating feel
-       // meshRef.current.rotation.x += delta * 0.5;
-       // meshRef.current.rotation.y += delta * 0.3;
     }
   });
 
   return (
-    <mesh ref={meshRef} position={position} rotation={initialRot as any}>
-      <boxGeometry args={[40, 40, 40]} />
-      {/* Premium Glass/Crystal Material */}
+    <RoundedBox 
+      ref={meshRef} 
+      position={position} 
+      args={[39, 39, 39]} 
+      radius={3} 
+      smoothness={4}
+    >
       <meshPhysicalMaterial 
         color={color} 
         emissive={color} 
-        emissiveIntensity={1.2} 
-        roughness={0.1}
-        metalness={0.3}
+        emissiveIntensity={0.6} 
+        roughness={0.15}
+        metalness={0.1}
         transmission={0.6}
         thickness={2}
         clearcoat={1}
         clearcoatRoughness={0.1}
         transparent 
-        opacity={0.9} 
+        opacity={0.8} 
       />
-      <lineSegments>
-        <edgesGeometry attach="geometry" args={[new THREE.BoxGeometry(40, 40, 40)]} />
-        <lineBasicMaterial attach="material" color="#ffffff" linewidth={2} transparent opacity={0.6} />
-      </lineSegments>
-    </mesh>
+    </RoundedBox>
   );
 };
 
@@ -97,8 +84,7 @@ function App() {
   const [showDebug, setShowDebug] = useState(false);
   const [isAudioEnabled, setIsAudioEnabled] = useState(false);
   const [envMode, setEnvMode] = useState<EnvMode>('NEON');
-  const [trackingMode, setTrackingMode] = useState<'HANDS'|'FACE'>('HANDS');
-  
+    
   const [showSliders, setShowSliders] = useState(false);
   const [activeTab, setActiveTab] = useState<'DRAW' | 'STUDIO'>('DRAW');
   const [showColorPicker, setShowColorPicker] = useState(false);
@@ -171,29 +157,87 @@ function App() {
     dimensions.height, 
     isLaunched
   );
-  const [builtBlocks, setBuiltBlocks] = useState<{x: number, y: number, z: number, color: string}[]>([]);
-  const lastBlockPosRef = useRef<{x: number, y: number, z: number} | null>(null);
+  const [builtBlocks, setBuiltBlocks] = useState<{ gx: number; gy: number; color: string }[]>([]);
+  const builtBlocksRef = useRef(builtBlocks);
+  useEffect(() => {
+    builtBlocksRef.current = builtBlocks;
+  }, [builtBlocks]);
+  const lastGridPosRef = useRef<{ gx: number; gy: number } | null>(null);
 
   useEffect(() => {
     if (activeTab !== 'DRAW' || mode !== 'BUILD') return;
     let animId: number;
+
+    const getLineCells = (x0: number, y0: number, x1: number, y1: number) => {
+      const cells: { x: number; y: number }[] = [];
+      const dx = Math.abs(x1 - x0);
+      const dy = Math.abs(y1 - y0);
+      const sx = x0 < x1 ? 1 : -1;
+      const sy = y0 < y1 ? 1 : -1;
+      let err = dx - dy;
+
+      let x = x0;
+      let y = y0;
+
+      while (true) {
+        cells.push({ x, y });
+        if (x === x1 && y === y1) break;
+        const e2 = 2 * err;
+        if (e2 > -dy) {
+          err -= dy;
+          x += sx;
+        }
+        if (e2 < dx) {
+          err += dx;
+          y += sy;
+        }
+      }
+      return cells;
+    };
+
     const loop = () => {
       const state = handStateRef.current;
       if (state.gesture === 'OK' && state.position) {
-        const dist = lastBlockPosRef.current ? Math.hypot(state.position.x - lastBlockPosRef.current.x, state.position.y - lastBlockPosRef.current.y) : 999;
-        if (dist > 45) {
-          setBuiltBlocks(prev => [...prev, { x: state.position!.x, y: state.position!.y, z: state.position!.z, color }]);
-          lastBlockPosRef.current = { ...state.position };
-          audio.playHover();
+        const scale = 662 / dimensions.height;
+        const rx = (state.position.x - dimensions.width / 2) * scale;
+        const ry = -(state.position.y - dimensions.height / 2) * scale;
+        
+        // Snapped grid coordinates
+        const gx = Math.round(rx / 40);
+        const gy = Math.round(ry / 40);
+
+        if (lastGridPosRef.current) {
+          const cells = getLineCells(lastGridPosRef.current.gx, lastGridPosRef.current.gy, gx, gy);
+          const newBlocks: { gx: number; gy: number; color: string }[] = [];
+          
+          cells.forEach(cell => {
+            const exists = builtBlocksRef.current.some(b => b.gx === cell.x && b.gy === cell.y) || 
+                           newBlocks.some(b => b.gx === cell.x && b.gy === cell.y);
+            if (!exists) {
+              newBlocks.push({ gx: cell.x, gy: cell.y, color });
+            }
+          });
+
+          if (newBlocks.length > 0) {
+            setBuiltBlocks(prev => [...prev, ...newBlocks]);
+            audio.playHover();
+          }
+        } else {
+          const exists = builtBlocksRef.current.some(b => b.gx === gx && b.gy === gy);
+          if (!exists) {
+            setBuiltBlocks(prev => [...prev, { gx, gy, color }]);
+            audio.playHover();
+          }
         }
+        lastGridPosRef.current = { gx, gy };
       } else {
-        lastBlockPosRef.current = null;
+        lastGridPosRef.current = null;
       }
       animId = requestAnimationFrame(loop);
     };
     animId = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(animId);
-  }, [mode, activeTab, color]);
+  }, [mode, activeTab, color, dimensions]);
   const gameEngine = useGameEngine();
   const { clearCanvas, saveToGallery, undo } = useSmoothDrawing(canvasRef, cursorCanvasRef, handStateRef, { color, size, glow, mode, symmetry }, gameEngine, videoRef, showPreview);
 
@@ -263,7 +307,7 @@ function App() {
         return; // Skip shortcuts when user is typing in input fields
       }
       const key = e.key.toLowerCase();
-      if (key === 'c') clearCanvas(); setBuiltBlocks([]);
+      if (key === 'c') { clearCanvas(); setBuiltBlocks([]); }
       if (key === 'z' || (e.ctrlKey && key === 'z')) undo();
       if (key === 'e') setMode('ERASE');
       if (key === 'd') setMode('DRAW');
@@ -507,11 +551,15 @@ function App() {
                 <pointLight position={[-50, -50, 100]} intensity={2} color="#00f3ff" />
                 
                 {builtBlocks.map((b, i) => {
-                  const scale = 662 / dimensions.height;
-                  const x = (b.x - dimensions.width / 2) * scale;
-                  const y = -(b.y - dimensions.height / 2) * scale;
+                  const x = b.gx * 40;
+                  const y = b.gy * 40;
                   return <AnimatedBlock key={i} position={[x, y, 0]} color={b.color} />;
                 })}
+                <gridHelper 
+                  args={[2000, 50, '#004455', '#11151a']} 
+                  rotation={[Math.PI / 2, 0, 0]} 
+                  position={[0, 0, -21]}
+                />
               </Canvas>
             </div>
 
@@ -577,33 +625,7 @@ function App() {
       )}
 
       
-      {/* Mode Toggle */}
-      <AnimatePresence>
-        {isLaunched && !gameEngine.isGameMode && (
-          <motion.div
-            initial={{ y: -50, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            className="absolute top-8 left-1/2 -translate-x-1/2 z-40 bg-[#131317]/80 backdrop-blur-2xl border border-white/10 rounded-full p-1.5 flex gap-1 transition-all duration-300"
-            style={{
-              boxShadow: `0 20px 40px rgba(0,0,0,0.5), 0 0 20px ${'#00f3ff'}1a`,
-              borderColor: `${'#00f3ff'}33`
-            }}
-          >
-            <button
-              onClick={() => { setTrackingMode('HANDS'); audio.playClick(); }}
-              className={`flex items-center gap-2 px-6 py-2 rounded-full font-bold text-xs uppercase tracking-widest transition-all ${trackingMode === 'HANDS' ? 'bg-[#00f3ff]/20 text-[#00f3ff] shadow-[0_0_15px_rgba(0,243,255,0.3)] border border-[#00f3ff]/50' : 'text-white/50 hover:bg-white/5 border border-transparent'}`}
-            >
-              <Hand size={16} /> Hands
-            </button>
-            <button
-              onClick={() => { setTrackingMode('FACE'); audio.playClick(); }}
-              className={`flex items-center gap-2 px-6 py-2 rounded-full font-bold text-xs uppercase tracking-widest transition-all ${trackingMode === 'FACE' ? 'bg-[#ff007f]/20 text-[#ff007f] shadow-[0_0_15px_rgba(255,0,127,0.3)] border border-[#ff007f]/50' : 'text-white/50 hover:bg-white/5 border border-transparent'}`}
-            >
-              <User size={16} /> Face AR
-            </button>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      /* Leftover Mode Toggle Removed */
 
       {/* Top HUD Bar for Game Mode */}
       <AnimatePresence>
