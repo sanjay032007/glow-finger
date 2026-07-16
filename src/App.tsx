@@ -1,4 +1,4 @@
-import { RoundedBox } from '@react-three/drei';
+import { RoundedBox, OrbitControls } from '@react-three/drei';
 import { useRef, useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Canvas } from '@react-three/fiber';
@@ -194,6 +194,7 @@ function App() {
   const [builtBlocks, setBuiltBlocks] = useState<{ 
     gx: number; 
     gy: number; 
+    gz: number; 
     color: string; 
     disintegratedAt?: number; 
     drift?: [number, number, number];
@@ -202,36 +203,80 @@ function App() {
   useEffect(() => {
     builtBlocksRef.current = builtBlocks;
   }, [builtBlocks]);
-  const lastGridPosRef = useRef<{ gx: number; gy: number } | null>(null);
+  const lastGridPosRef = useRef<{ gx: number; gy: number; gz: number } | null>(null);
+  const smoothedZRef = useRef<number>(0);
 
   useEffect(() => {
     if (activeTab !== 'DRAW' || mode !== 'BUILD') return;
     let animId: number;
 
-    const getLineCells = (x0: number, y0: number, x1: number, y1: number) => {
-      const cells: { x: number; y: number }[] = [];
+    // 3D Bresenham's Line Algorithm
+    const getLineCells3D = (x0: number, y0: number, z0: number, x1: number, y1: number, z1: number) => {
+      const cells: { x: number; y: number; z: number }[] = [];
       const dx = Math.abs(x1 - x0);
       const dy = Math.abs(y1 - y0);
+      const dz = Math.abs(z1 - z0);
       const sx = x0 < x1 ? 1 : -1;
       const sy = y0 < y1 ? 1 : -1;
-      let err = dx - dy;
+      const sz = z0 < z1 ? 1 : -1;
 
       let x = x0;
       let y = y0;
+      let z = z0;
 
-      while (true) {
-        cells.push({ x, y });
-        if (x === x1 && y === y1) break;
-        const e2 = 2 * err;
-        if (e2 > -dy) {
-          err -= dy;
+      if (dx >= dy && dx >= dz) {
+        let p1 = 2 * dy - dx;
+        let p2 = 2 * dz - dx;
+        while (x !== x1) {
+          cells.push({ x, y, z });
           x += sx;
+          if (p1 >= 0) {
+            y += sy;
+            p1 -= 2 * dx;
+          }
+          if (p2 >= 0) {
+            z += sz;
+            p2 -= 2 * dx;
+          }
+          p1 += 2 * dy;
+          p2 += 2 * dz;
         }
-        if (e2 < dx) {
-          err += dx;
+      } else if (dy >= dx && dy >= dz) {
+        let p1 = 2 * dx - dy;
+        let p2 = 2 * dz - dy;
+        while (y !== y1) {
+          cells.push({ x, y, z });
           y += sy;
+          if (p1 >= 0) {
+            x += sx;
+            p1 -= 2 * dy;
+          }
+          if (p2 >= 0) {
+            z += sz;
+            p2 -= 2 * dy;
+          }
+          p1 += 2 * dx;
+          p2 += 2 * dz;
+        }
+      } else {
+        let p1 = 2 * dx - dz;
+        let p2 = 2 * dy - dz;
+        while (z !== z1) {
+          cells.push({ x, y, z });
+          z += sz;
+          if (p1 >= 0) {
+            x += sx;
+            p1 -= 2 * dz;
+          }
+          if (p2 >= 0) {
+            y += sy;
+            p2 -= 2 * dz;
+          }
+          p1 += 2 * dx;
+          p2 += 2 * dy;
         }
       }
+      cells.push({ x: x1, y: y1, z: z1 });
       return cells;
     };
 
@@ -242,19 +287,32 @@ function App() {
         const rx = (state.position.x - dimensions.width / 2) * scale;
         const ry = -(state.position.y - dimensions.height / 2) * scale;
         
+        // Scale and smooth depth (z)
+        const targetZ = (state.position.z || 0) * -2000;
+        smoothedZRef.current = smoothedZRef.current + (targetZ - smoothedZRef.current) * 0.15;
+        const rz = smoothedZRef.current;
+
         // Snapped grid coordinates
         const gx = Math.round(rx / 40);
         const gy = Math.round(ry / 40);
+        const gz = Math.round(rz / 40);
 
         if (lastGridPosRef.current) {
-          const cells = getLineCells(lastGridPosRef.current.gx, lastGridPosRef.current.gy, gx, gy);
-          const newBlocks: { gx: number; gy: number; color: string }[] = [];
+          const cells = getLineCells3D(
+            lastGridPosRef.current.gx, 
+            lastGridPosRef.current.gy, 
+            lastGridPosRef.current.gz, 
+            gx, 
+            gy, 
+            gz
+          );
+          const newBlocks: { gx: number; gy: number; gz: number; color: string }[] = [];
           
           cells.forEach(cell => {
-            const exists = builtBlocksRef.current.some(b => b.gx === cell.x && b.gy === cell.y) || 
-                           newBlocks.some(b => b.gx === cell.x && b.gy === cell.y);
+            const exists = builtBlocksRef.current.some(b => b.gx === cell.x && b.gy === cell.y && b.gz === cell.z) || 
+                           newBlocks.some(b => b.gx === cell.x && b.gy === cell.y && b.gz === cell.z);
             if (!exists) {
-              newBlocks.push({ gx: cell.x, gy: cell.y, color });
+              newBlocks.push({ gx: cell.x, gy: cell.y, gz: cell.z, color });
             }
           });
 
@@ -263,13 +321,13 @@ function App() {
             audio.playHover();
           }
         } else {
-          const exists = builtBlocksRef.current.some(b => b.gx === gx && b.gy === gy);
+          const exists = builtBlocksRef.current.some(b => b.gx === gx && b.gy === gy && b.gz === gz);
           if (!exists) {
-            setBuiltBlocks(prev => [...prev, { gx, gy, color }]);
+            setBuiltBlocks(prev => [...prev, { gx, gy, gz, color }]);
             audio.playHover();
           }
         }
-        lastGridPosRef.current = { gx, gy };
+        lastGridPosRef.current = { gx, gy, gz };
       } else {
         lastGridPosRef.current = null;
       }
@@ -279,62 +337,7 @@ function App() {
     return () => cancelAnimationFrame(animId);
   }, [mode, activeTab, color, dimensions]);
 
-  const snapHistoryRef = useRef<number[]>([]);
-  const lastSnapTimeRef = useRef<number>(0);
-
-  useEffect(() => {
-    if (!isLaunched || activeTab !== 'DRAW') return;
-    let animId: number;
-
-    const loop = () => {
-      const state = handStateRef.current;
-      if (state && state.landmarks && state.landmarks.length >= 21) {
-        const thumbTip = state.landmarks[4];
-        const middleTip = state.landmarks[12];
-        const dist = Math.hypot(thumbTip.x - middleTip.x, thumbTip.y - middleTip.y);
-
-        // Push to history
-        snapHistoryRef.current.push(dist);
-        if (snapHistoryRef.current.length > 6) {
-          snapHistoryRef.current.shift();
-        }
-
-        if (snapHistoryRef.current.length >= 4) {
-          const wasPinching = snapHistoryRef.current[0] < 45 || snapHistoryRef.current[1] < 45;
-          const isReleasedNow = dist > 130;
-
-          const now = performance.now();
-          if (wasPinching && isReleasedNow && (now - lastSnapTimeRef.current > 1200)) {
-            audio.playSnap();
-            setIsFlashing(true);
-            setTimeout(() => setIsFlashing(false), 150);
-
-            const snapTime = now;
-            setBuiltBlocks(prev => prev.map(b => b.disintegratedAt ? b : {
-              ...b,
-              disintegratedAt: snapTime,
-              drift: [
-                (Math.random() - 0.5) * 150,
-                Math.random() * 200 + 100,
-                (Math.random() - 0.5) * 150
-              ]
-            }));
-
-            setTimeout(() => {
-              setBuiltBlocks(prev => prev.filter(b => !b.disintegratedAt));
-            }, 1500);
-
-            lastSnapTimeRef.current = now;
-          }
-        }
-      }
-      animId = requestAnimationFrame(loop);
-    };
-
-    animId = requestAnimationFrame(loop);
-    return () => cancelAnimationFrame(animId);
-  }, [isLaunched, activeTab]);
-  const gameEngine = useGameEngine();
+const gameEngine = useGameEngine();
   const { clearCanvas, saveToGallery, undo } = useSmoothDrawing(canvasRef, cursorCanvasRef, handStateRef, { color, size, glow, mode, symmetry }, gameEngine, videoRef, showPreview);
 
   
@@ -641,7 +644,7 @@ function App() {
 
             {/* 3D Build Canvas (Perspective overlay) */}
             <div className="absolute inset-0 z-0 pointer-events-none">
-              <Canvas camera={{ position: [0, 0, 800], fov: 45 }}>
+              <Canvas camera={{ position: [150, 150, 800], fov: 45 }}>
                 <ambientLight intensity={1.5} />
                 <directionalLight position={[10, 10, 50]} intensity={2.5} />
                 <pointLight position={[-50, -50, 100]} intensity={2} color="#00f3ff" />
@@ -649,16 +652,18 @@ function App() {
                 {builtBlocks.map((b, i) => {
                   const x = b.gx * 40;
                   const y = b.gy * 40;
+                  const z = b.gz * 40;
                   return (
                     <AnimatedBlock 
                       key={i} 
-                      position={[x, y, 0]} 
+                      position={[x, y, z]} 
                       color={b.color} 
                       disintegratedAt={b.disintegratedAt}
                       drift={b.drift}
                     />
                   );
                 })}
+                <OrbitControls makeDefault />
                 
               </Canvas>
             </div>

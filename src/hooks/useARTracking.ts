@@ -12,6 +12,32 @@ export interface HandState {
 
 const WASM_CDN = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision/wasm';
 
+let preloadedHandLandmarkerPromise: Promise<HandLandmarker> | null = null;
+
+const preloadModel = () => {
+  if (!preloadedHandLandmarkerPromise) {
+    preloadedHandLandmarkerPromise = (async () => {
+      const vision = await FilesetResolver.forVisionTasks(WASM_CDN);
+      return await HandLandmarker.createFromOptions(vision, {
+        baseOptions: {
+          modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task',
+          delegate: 'GPU'
+        },
+        runningMode: 'VIDEO',
+        numHands: 1,
+        minHandDetectionConfidence: 0.6,
+        minHandPresenceConfidence: 0.6,
+        minTrackingConfidence: 0.6
+      });
+    })();
+  }
+  return preloadedHandLandmarkerPromise;
+};
+
+// Start preloading immediately when the module is imported
+preloadModel();
+
+
 export const useARTracking = (
   videoRef: React.RefObject<HTMLVideoElement>,
   canvasWidth: number,
@@ -41,19 +67,9 @@ export const useARTracking = (
     const initAndRun = async () => {
       try {
         const isMobile = window.innerWidth < 768;
-        const vision = await FilesetResolver.forVisionTasks(WASM_CDN);
-
-        handLandmarker = await HandLandmarker.createFromOptions(vision, {
-          baseOptions: {
-            modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task',
-            delegate: 'GPU'
-          },
-          runningMode: 'VIDEO',
-          numHands: 1,
-          minHandDetectionConfidence: 0.6,
-          minHandPresenceConfidence: 0.6,
-          minTrackingConfidence: 0.6
-        });
+        
+        // Wait for preloaded model
+        handLandmarker = await preloadModel();
 
         // Start the camera stream using standard browser APIs
         const video = videoRef.current!;
