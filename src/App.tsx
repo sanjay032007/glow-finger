@@ -27,24 +27,58 @@ import {
 
 import { useFrame } from '@react-three/fiber';
 
-const AnimatedBlock = ({ position, color }: { position: [number, number, number], color: string }) => {
+const AnimatedBlock = ({ 
+  position, 
+  color, 
+  disintegratedAt, 
+  drift 
+}: { 
+  position: [number, number, number]; 
+  color: string; 
+  disintegratedAt?: number; 
+  drift?: [number, number, number];
+}) => {
   const meshRef = useRef<THREE.Mesh>(null!);
   const [scale, setScale] = useState(0);
+  const [offset, setOffset] = useState<[number, number, number]>([0, 0, 0]);
+  const [opacity, setOpacity] = useState(0.8);
 
   useFrame((_state, delta) => {
-    if (scale < 1) {
-      setScale(prev => Math.min(prev + delta * 6, 1));
+    if (disintegratedAt) {
+      const elapsed = (performance.now() - disintegratedAt) / 1000;
+      if (elapsed > 0) {
+        setOpacity(Math.max(0.8 - elapsed * 0.8, 0));
+        setScale(Math.max(1 - elapsed, 0));
+        if (drift) {
+          setOffset([
+            drift[0] * elapsed,
+            drift[1] * elapsed,
+            drift[2] * elapsed
+          ]);
+        }
+      }
+    } else {
+      if (scale < 1) {
+        setScale(prev => Math.min(prev + delta * 6, 1));
+      }
     }
+
     if (meshRef.current) {
-       const currentScale = scale < 1 ? scale * (1.5 - scale * 0.5) : 1; 
+       const currentScale = scale < 1 ? scale * (1.5 - scale * 0.5) : scale; 
        meshRef.current.scale.setScalar(currentScale);
     }
   });
 
+  const finalPosition: [number, number, number] = [
+    position[0] + offset[0],
+    position[1] + offset[1],
+    position[2] + offset[2]
+  ];
+
   return (
     <RoundedBox 
       ref={meshRef} 
-      position={position} 
+      position={finalPosition} 
       args={[39, 39, 39]} 
       radius={3} 
       smoothness={4}
@@ -52,7 +86,7 @@ const AnimatedBlock = ({ position, color }: { position: [number, number, number]
       <meshPhysicalMaterial 
         color={color} 
         emissive={color} 
-        emissiveIntensity={0.6} 
+        emissiveIntensity={disintegratedAt ? 0.6 * opacity : 0.6} 
         roughness={0.15}
         metalness={0.1}
         transmission={0.6}
@@ -60,7 +94,7 @@ const AnimatedBlock = ({ position, color }: { position: [number, number, number]
         clearcoat={1}
         clearcoatRoughness={0.1}
         transparent 
-        opacity={0.8} 
+        opacity={opacity} 
       />
     </RoundedBox>
   );
@@ -157,7 +191,13 @@ function App() {
     dimensions.height, 
     isLaunched
   );
-  const [builtBlocks, setBuiltBlocks] = useState<{ gx: number; gy: number; color: string }[]>([]);
+  const [builtBlocks, setBuiltBlocks] = useState<{ 
+    gx: number; 
+    gy: number; 
+    color: string; 
+    disintegratedAt?: number; 
+    drift?: [number, number, number];
+  }[]>([]);
   const builtBlocksRef = useRef(builtBlocks);
   useEffect(() => {
     builtBlocksRef.current = builtBlocks;
@@ -238,6 +278,62 @@ function App() {
     animId = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(animId);
   }, [mode, activeTab, color, dimensions]);
+
+  const snapHistoryRef = useRef<number[]>([]);
+  const lastSnapTimeRef = useRef<number>(0);
+
+  useEffect(() => {
+    if (!isLaunched || activeTab !== 'DRAW') return;
+    let animId: number;
+
+    const loop = () => {
+      const state = handStateRef.current;
+      if (state && state.landmarks && state.landmarks.length >= 21) {
+        const thumbTip = state.landmarks[4];
+        const middleTip = state.landmarks[12];
+        const dist = Math.hypot(thumbTip.x - middleTip.x, thumbTip.y - middleTip.y);
+
+        // Push to history
+        snapHistoryRef.current.push(dist);
+        if (snapHistoryRef.current.length > 6) {
+          snapHistoryRef.current.shift();
+        }
+
+        if (snapHistoryRef.current.length >= 4) {
+          const wasPinching = snapHistoryRef.current[0] < 45 || snapHistoryRef.current[1] < 45;
+          const isReleasedNow = dist > 130;
+
+          const now = performance.now();
+          if (wasPinching && isReleasedNow && (now - lastSnapTimeRef.current > 1200)) {
+            audio.playSnap();
+            setIsFlashing(true);
+            setTimeout(() => setIsFlashing(false), 150);
+
+            const snapTime = now;
+            setBuiltBlocks(prev => prev.map(b => b.disintegratedAt ? b : {
+              ...b,
+              disintegratedAt: snapTime,
+              drift: [
+                (Math.random() - 0.5) * 150,
+                Math.random() * 200 + 100,
+                (Math.random() - 0.5) * 150
+              ]
+            }));
+
+            setTimeout(() => {
+              setBuiltBlocks(prev => prev.filter(b => !b.disintegratedAt));
+            }, 1500);
+
+            lastSnapTimeRef.current = now;
+          }
+        }
+      }
+      animId = requestAnimationFrame(loop);
+    };
+
+    animId = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(animId);
+  }, [isLaunched, activeTab]);
   const gameEngine = useGameEngine();
   const { clearCanvas, saveToGallery, undo } = useSmoothDrawing(canvasRef, cursorCanvasRef, handStateRef, { color, size, glow, mode, symmetry }, gameEngine, videoRef, showPreview);
 
@@ -553,7 +649,15 @@ function App() {
                 {builtBlocks.map((b, i) => {
                   const x = b.gx * 40;
                   const y = b.gy * 40;
-                  return <AnimatedBlock key={i} position={[x, y, 0]} color={b.color} />;
+                  return (
+                    <AnimatedBlock 
+                      key={i} 
+                      position={[x, y, 0]} 
+                      color={b.color} 
+                      disintegratedAt={b.disintegratedAt}
+                      drift={b.drift}
+                    />
+                  );
                 })}
                 
               </Canvas>

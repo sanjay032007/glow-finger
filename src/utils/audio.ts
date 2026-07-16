@@ -34,6 +34,52 @@ class AudioEngine {
     osc.stop(this.ctx.currentTime + 0.15);
   }
 
+  playSnap() {
+    this.init();
+    if (!this.ctx) return;
+    const t = this.ctx.currentTime;
+    
+    // Impact click (High frequency pitch ramp)
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(1500, t);
+    osc.frequency.exponentialRampToValueAtTime(150, t + 0.08);
+    
+    gain.gain.setValueAtTime(0.15, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.08);
+    
+    // Friction click (Noise burst)
+    const bufferSize = this.ctx.sampleRate * 0.03; // 30ms noise
+    const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) {
+      data[i] = Math.random() * 2 - 1;
+    }
+    const noise = this.ctx.createBufferSource();
+    noise.buffer = buffer;
+    
+    const filter = this.ctx.createBiquadFilter();
+    filter.type = 'highpass';
+    filter.frequency.setValueAtTime(2000, t);
+    
+    const noiseGain = this.ctx.createGain();
+    noiseGain.gain.setValueAtTime(0.1, t);
+    noiseGain.gain.exponentialRampToValueAtTime(0.001, t + 0.03);
+    
+    noise.connect(filter);
+    filter.connect(noiseGain);
+    noiseGain.connect(this.ctx.destination);
+    
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+    
+    osc.start(t);
+    osc.stop(t + 0.08);
+    noise.start(t);
+    noise.stop(t + 0.08);
+  }
+
   playHover() {
     this.init();
     if (!this.ctx) return;
