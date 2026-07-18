@@ -465,14 +465,18 @@ const gameEngine = useGameEngine();
         
 
 
-        {/* 3D Background & Hand Canvas with Post-Processing Bloom */}
+        {/* 3D Background & Hand Canvas with Origami Shading Lights */}
         <div className="fixed inset-0 z-0 pointer-events-auto">
           <Canvas camera={{ position: [0, 0, 8], fov: 45 }}>
-            
+            {theme === 'PAPERCRAFT' ? (
+              <>
+                <ambientLight intensity={0.75} />
+                <directionalLight position={[10, 20, 15]} intensity={1.6} />
+                <directionalLight position={[-10, -10, -5]} intensity={0.3} color="#dfc2a5" />
+              </>
+            ) : null}
             {/* Interactive 3D Hand */}
             <Hand3D isMobile={false} handStateRef={handStateRef} theme={theme} />
-
-            
           </Canvas>
         </div>
 

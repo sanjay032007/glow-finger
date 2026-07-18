@@ -109,15 +109,16 @@ export function Hand3D({ isMobile, handStateRef, theme = 'NEON' }: { isMobile: b
         const mesh = child as THREE.Mesh;
         const isPaper = theme === 'PAPERCRAFT';
         const mat = new THREE.MeshPhysicalMaterial({
-          color: isPaper ? new THREE.Color('#dfc2a5') : new THREE.Color('#b026ff'),
+          color: isPaper ? new THREE.Color('#faf6f0') : new THREE.Color('#b026ff'),
           emissive: isPaper ? new THREE.Color('#000000') : new THREE.Color('#b026ff'),
           emissiveIntensity: isPaper ? 0 : 1.2,
-          roughness: isPaper ? 0.95 : 0.15,
+          roughness: isPaper ? 0.98 : 0.15,
           metalness: isPaper ? 0.0 : 0.1,
           transparent: !isPaper,
           opacity: isPaper ? 1.0 : 0.35,
           transmission: isPaper ? 0.0 : 0.9,
           thickness: isPaper ? 0.0 : 1.2,
+          flatShading: isPaper, // Faceted origami look!
         });
         mesh.material = mat;
         materialsRef.current.solid.push(mat);
@@ -134,7 +135,7 @@ export function Hand3D({ isMobile, handStateRef, theme = 'NEON' }: { isMobile: b
           color: isPaper ? new THREE.Color('#5c564c') : new THREE.Color('#00f3ff'),
           wireframe: true,
           transparent: true,
-          opacity: isPaper ? 0.15 : 0.7,
+          opacity: isPaper ? 0.0 : 0.7, // Hide wireframe in paper mode
           blending: isPaper ? THREE.NormalBlending : THREE.AdditiveBlending
         });
         mesh.material = mat;
