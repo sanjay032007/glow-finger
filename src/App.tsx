@@ -728,6 +728,9 @@ const gameEngine = useGameEngine();
                   </>
                 )}
                 
+                {/* Real-time 3D Origami Hand Tracking inside the Studio Canvas */}
+                <Hand3D isMobile={false} handStateRef={handStateRef} theme={theme} />
+                
                 {builtBlocks.map((b, i) => {
                   const x = b.gx * 40;
                   const y = b.gy * 40;
