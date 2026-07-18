@@ -224,6 +224,8 @@ function App() {
   useEffect(() => {
     builtBlocksRef.current = builtBlocks;
   }, [builtBlocks]);
+  const snapHistoryRef = useRef<number[]>([]);
+  const lastSnapTimeRef = useRef<number>(0);
   const lastGridPosRef = useRef<{ gx: number; gy: number; gz: number } | null>(null);
   const smoothedZRef = useRef<number>(0);
 
@@ -357,6 +359,60 @@ function App() {
     animId = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(animId);
   }, [mode, activeTab, color, dimensions]);
+
+  useEffect(() => {
+    if (!isLaunched || activeTab !== 'DRAW') return;
+    let animId: number;
+
+    const loop = () => {
+      const state = handStateRef.current;
+      if (state && state.landmarks && state.landmarks.length >= 21) {
+        const thumbTip = state.landmarks[4];
+        const middleTip = state.landmarks[12];
+        const dist = Math.hypot(thumbTip.x - middleTip.x, thumbTip.y - middleTip.y);
+
+        // Push to history
+        snapHistoryRef.current.push(dist);
+        if (snapHistoryRef.current.length > 8) {
+          snapHistoryRef.current.shift();
+        }
+
+        if (snapHistoryRef.current.length >= 4) {
+          // Detect sudden release from pinch (was < 55px, now > 150px)
+          const wasPinching = snapHistoryRef.current[0] < 55 || snapHistoryRef.current[1] < 55 || snapHistoryRef.current[2] < 55;
+          const isReleasedNow = dist > 150;
+
+          const now = performance.now();
+          if (wasPinching && isReleasedNow && (now - lastSnapTimeRef.current > 1200)) {
+            audio.playSnap();
+            setIsFlashing(true);
+            setTimeout(() => setIsFlashing(false), 150);
+
+            const snapTime = now;
+            setBuiltBlocks(prev => prev.map(b => b.disintegratedAt ? b : {
+              ...b,
+              disintegratedAt: snapTime,
+              drift: [
+                (Math.random() - 0.5) * 150,
+                Math.random() * 200 + 100,
+                (Math.random() - 0.5) * 150
+              ]
+            }));
+
+            setTimeout(() => {
+              setBuiltBlocks(prev => prev.filter(b => !b.disintegratedAt));
+            }, 1500);
+
+            lastSnapTimeRef.current = now;
+          }
+        }
+      }
+      animId = requestAnimationFrame(loop);
+    };
+
+    animId = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(animId);
+  }, [isLaunched, activeTab]);
 
 const gameEngine = useGameEngine();
   const { clearCanvas, saveToGallery, undo } = useSmoothDrawing(
