@@ -11,6 +11,7 @@ interface DrawOptions {
   glow: number;
   mode: DrawMode;
   symmetry?: SymmetryMode;
+  theme?: 'NEON' | 'PAPERCRAFT';
 }
 
 interface Particle {
@@ -34,6 +35,7 @@ export const useSmoothDrawing = (
   showPreview?: boolean
 ) => {
   const prevPointRef = useRef<Point | null>(null);
+  const prevMidRef = useRef<Point | null>(null);
   const isDrawingRef = useRef(false);
   const undoStackRef = useRef<ImageData[]>([]);
   const particlesRef = useRef<Particle[]>([]);
@@ -89,10 +91,11 @@ export const useSmoothDrawing = (
         // Draw hand tracking skeleton on cursor canvas
         if (cursorCtx && cursorCanvas && state.landmarks && canvas.width > 0) {
           cursorCtx.save();
-          cursorCtx.strokeStyle = 'rgba(0, 243, 255, 0.4)';
+          const isPaper = options.theme === 'PAPERCRAFT';
+          cursorCtx.strokeStyle = isPaper ? 'rgba(74, 69, 63, 0.22)' : 'rgba(0, 243, 255, 0.4)';
           cursorCtx.lineWidth = 2;
-          cursorCtx.shadowBlur = 10;
-          cursorCtx.shadowColor = '#00f3ff';
+          cursorCtx.shadowBlur = isPaper ? 0 : 10;
+          cursorCtx.shadowColor = isPaper ? 'transparent' : '#00f3ff';
           
           const connections = [
             [0,1], [1,2], [2,3], [3,4], // Thumb
@@ -113,10 +116,10 @@ export const useSmoothDrawing = (
           });
           cursorCtx.stroke();
           
-          cursorCtx.fillStyle = '#ffffff';
+          cursorCtx.fillStyle = isPaper ? '#4a453f' : '#ffffff';
           state.landmarks.forEach((lm: any) => {
             cursorCtx.beginPath();
-            cursorCtx.arc(lm.x, lm.y, 3, 0, Math.PI * 2);
+            cursorCtx.arc(lm.x, lm.y, isPaper ? 2 : 3, 0, Math.PI * 2);
             cursorCtx.fill();
           });
           cursorCtx.restore();
@@ -273,10 +276,11 @@ export const useSmoothDrawing = (
           }
         }
 
-        // Shared symmetric line drawing routine
-        const drawLineSegment = (
-          x1: number, y1: number,
-          x2: number, y2: number,
+        // Shared symmetric curve drawing routine
+        const drawCurveSegment = (
+          xStart: number, yStart: number,
+          xControl: number, yControl: number,
+          xEnd: number, yEnd: number,
           w: number,
           strokeCol: string,
           shadowCol: string,
@@ -289,35 +293,45 @@ export const useSmoothDrawing = (
           ctx.strokeStyle = strokeCol;
           ctx.shadowBlur = blurVal;
           ctx.shadowColor = shadowCol;
+          ctx.lineCap = 'round';
+          ctx.lineJoin = 'round';
           ctx.beginPath();
-          ctx.moveTo(x1, y1);
-          ctx.lineTo(x2, y2);
+          ctx.moveTo(xStart, yStart);
+          ctx.quadraticCurveTo(xControl, yControl, xEnd, yEnd);
           ctx.stroke();
           ctx.restore();
         };
 
         const drawSymmetric = (
-          x1: number, y1: number,
-          x2: number, y2: number,
+          xStart: number, yStart: number,
+          xControl: number, yControl: number,
+          xEnd: number, yEnd: number,
           w: number,
           strokeCol: string,
           shadowCol: string,
           blurVal: number,
           compositeOp: GlobalCompositeOperation = 'source-over'
         ) => {
-          drawLineSegment(x1, y1, x2, y2, w, strokeCol, shadowCol, blurVal, compositeOp);
+          drawCurveSegment(xStart, yStart, xControl, yControl, xEnd, yEnd, w, strokeCol, shadowCol, blurVal, compositeOp);
 
           const sym = options.symmetry || 'NONE';
           if (sym === 'HORIZONTAL') {
-            drawLineSegment(2 * cx - x1, y1, 2 * cx - x2, y2, w, strokeCol, shadowCol, blurVal, compositeOp);
+            drawCurveSegment(
+              2 * cx - xStart, yStart,
+              2 * cx - xControl, yControl,
+              2 * cx - xEnd, yEnd,
+              w, strokeCol, shadowCol, blurVal, compositeOp
+            );
           } else if (sym === 'RADIAL') {
             const angles = [Math.PI / 2, Math.PI, (3 * Math.PI) / 2];
             angles.forEach(angle => {
-              const rx1 = cx + (x1 - cx) * Math.cos(angle) - (y1 - cy) * Math.sin(angle);
-              const ry1 = cy + (x1 - cx) * Math.sin(angle) + (y1 - cy) * Math.cos(angle);
-              const rx2 = cx + (x2 - cx) * Math.cos(angle) - (y2 - cy) * Math.sin(angle);
-              const ry2 = cy + (x2 - cx) * Math.sin(angle) + (y2 - cy) * Math.cos(angle);
-              drawLineSegment(rx1, ry1, rx2, ry2, w, strokeCol, shadowCol, blurVal, compositeOp);
+              const rxStart = cx + (xStart - cx) * Math.cos(angle) - (yStart - cy) * Math.sin(angle);
+              const ryStart = cy + (xStart - cx) * Math.sin(angle) + (yStart - cy) * Math.cos(angle);
+              const rxControl = cx + (xControl - cx) * Math.cos(angle) - (yControl - cy) * Math.sin(angle);
+              const ryControl = cy + (xControl - cx) * Math.sin(angle) + (yControl - cy) * Math.cos(angle);
+              const rxEnd = cx + (xEnd - cx) * Math.cos(angle) - (yEnd - cy) * Math.sin(angle);
+              const ryEnd = cy + (xEnd - cx) * Math.sin(angle) + (yEnd - cy) * Math.cos(angle);
+              drawCurveSegment(rxStart, ryStart, rxControl, ryControl, rxEnd, ryEnd, w, strokeCol, shadowCol, blurVal, compositeOp);
             });
           }
         };
@@ -369,6 +383,7 @@ export const useSmoothDrawing = (
           if (!isDrawingRef.current || !prevPointRef.current) {
             isDrawingRef.current = true;
             prevPointRef.current = avgPos;
+            prevMidRef.current = avgPos;
           } else {
             const prev = prevPointRef.current;
             const curr = avgPos;
@@ -376,17 +391,20 @@ export const useSmoothDrawing = (
             const dist = Math.hypot(curr.x - prev.x, curr.y - prev.y);
             if (dist > 1000) {
               prevPointRef.current = curr;
+              prevMidRef.current = curr;
               animationFrameId = requestAnimationFrame(renderLoop);
               return;
             }
 
             const midX = (prev.x + curr.x) / 2;
             const midY = (prev.y + curr.y) / 2;
+            const prevMid = prevMidRef.current || prev;
 
             if (!gameEngine?.isGameMode) {
+              const isPaper = options.theme === 'PAPERCRAFT';
               
               if (options.mode === 'ERASE') {
-                drawSymmetric(prev.x, prev.y, midX, midY, dynamicSize, 'rgba(0,0,0,1)', 'rgba(0,0,0,1)', 0, 'destination-out');
+                drawSymmetric(prevMid.x, prevMid.y, prev.x, prev.y, midX, midY, dynamicSize, 'rgba(0,0,0,1)', 'rgba(0,0,0,1)', 0, 'destination-out');
               } 
               else if (options.mode === 'LASER') {
                 const dx = curr.x - prev.x;
@@ -398,13 +416,13 @@ export const useSmoothDrawing = (
                   const offset = dynamicSize * 1.2;
 
                   // Dual Laser 1 (Left)
-                  drawSymmetric(prev.x + nx * offset, prev.y + ny * offset, curr.x + nx * offset, curr.y + ny * offset, dynamicSize * 0.3, activeColor, activeColor, options.glow);
+                  drawSymmetric(prev.x + nx * offset, prev.y + ny * offset, (prev.x + curr.x)/2 + nx * offset, (prev.y + curr.y)/2 + ny * offset, curr.x + nx * offset, curr.y + ny * offset, dynamicSize * 0.3, activeColor, activeColor, options.glow);
                   // Dual Laser 2 (Right)
-                  drawSymmetric(prev.x - nx * offset, prev.y - ny * offset, curr.x - nx * offset, curr.y - ny * offset, dynamicSize * 0.3, activeColor, activeColor, options.glow);
+                  drawSymmetric(prev.x - nx * offset, prev.y - ny * offset, (prev.x + curr.x)/2 - nx * offset, (prev.y + curr.y)/2 - ny * offset, curr.x - nx * offset, curr.y - ny * offset, dynamicSize * 0.3, activeColor, activeColor, options.glow);
 
                   // Core glow (White center)
-                  drawSymmetric(prev.x + nx * offset, prev.y + ny * offset, curr.x + nx * offset, curr.y + ny * offset, dynamicSize * 0.1, '#ffffff', activeColor, options.glow * 0.4);
-                  drawSymmetric(prev.x - nx * offset, prev.y - ny * offset, curr.x - nx * offset, curr.y - ny * offset, dynamicSize * 0.1, '#ffffff', activeColor, options.glow * 0.4);
+                  drawSymmetric(prev.x + nx * offset, prev.y + ny * offset, (prev.x + curr.x)/2 + nx * offset, (prev.y + curr.y)/2 + ny * offset, curr.x + nx * offset, curr.y + ny * offset, dynamicSize * 0.1, '#ffffff', activeColor, options.glow * 0.4);
+                  drawSymmetric(prev.x - nx * offset, prev.y - ny * offset, (prev.x + curr.x)/2 - nx * offset, (prev.y + curr.y)/2 - ny * offset, curr.x - nx * offset, curr.y - ny * offset, dynamicSize * 0.1, '#ffffff', activeColor, options.glow * 0.4);
                 }
               }
               else if (options.mode === 'FIRE') {
@@ -412,7 +430,7 @@ export const useSmoothDrawing = (
                 for (let i = 0; i < 4; i++) {
                   const rx = avgPos.x + (Math.random() - 0.5) * 8;
                   const ry = avgPos.y + (Math.random() - 0.5) * 8;
-                  const colStr = `hsl(${Math.random() * 28 + 12}, 100%, ${Math.random() * 30 + 50}%)`;
+                  const colStr = 'hsl(' + (Math.random() * 28 + 12) + ', 100%, ' + (Math.random() * 30 + 50) + '%)';
                   
                   spawnParticlesSymmetric(
                     rx, ry,
@@ -424,10 +442,15 @@ export const useSmoothDrawing = (
                 }
               }
               else {
-                // DRAW, COSMIC, RAINBOW Brush
-                drawSymmetric(prev.x, prev.y, midX, midY, dynamicSize, activeColor, activeColor, options.glow);
-                // Draw inner white core
-                drawSymmetric(prev.x, prev.y, midX, midY, dynamicSize * 0.4, '#ffffff', activeColor, options.glow * 0.5);
+                // DRAW, COSMIC, RAINBOW Brush using smooth curves
+                drawSymmetric(prevMid.x, prevMid.y, prev.x, prev.y, midX, midY, dynamicSize, activeColor, activeColor, options.glow);
+                // Draw inner white core (Neon only)
+                if (!isPaper) {
+                  drawSymmetric(prevMid.x, prevMid.y, prev.x, prev.y, midX, midY, dynamicSize * 0.4, '#ffffff', activeColor, options.glow * 0.5);
+                }
+
+                // Update previous mid references for next iteration
+                prevMidRef.current = { x: midX, y: midY, z: avgPos.z };
 
                 // Normal particle sparkles
                 if (Math.random() > 0.65 || options.mode === 'COSMIC') {

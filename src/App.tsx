@@ -368,7 +368,8 @@ const gameEngine = useGameEngine();
       size, 
       glow: theme === 'PAPERCRAFT' ? 0 : glow, 
       mode, 
-      symmetry 
+      symmetry,
+      theme
     }, 
     gameEngine, 
     videoRef, 
@@ -1118,15 +1119,15 @@ const gameEngine = useGameEngine();
         {activeTab === 'DRAW' && !isReady && !error && (
           <motion.div 
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="absolute inset-0 bg-[#050505]/90 flex items-center justify-center z-30 backdrop-blur-md"
+            className="absolute inset-0 bg-[#f5f2eb]/95 flex items-center justify-center z-30 backdrop-blur-sm"
           >
             <div className="flex flex-col items-center gap-8">
               <div className="relative w-20 h-20">
-                <div className="absolute inset-0 border-4 border-white/5 rounded-full"></div>
-                <div className="absolute inset-0 border-4 border-[#00f3ff] border-t-transparent rounded-full animate-spin"></div>
-                <div className="absolute inset-0 border-4 border-[#b026ff] border-b-transparent rounded-full animate-[spin_1.5s_linear_infinite_reverse] shadow-[0_0_40px_rgba(176,38,255,0.4)]"></div>
+                <div className="absolute inset-0 border-4 border-[#4a453f]/10 rounded-full"></div>
+                <div className="absolute inset-0 border-4 border-[#c45c55] border-t-transparent rounded-full animate-spin"></div>
+                <div className="absolute inset-0 border-4 border-[#d4a34b] border-b-transparent rounded-full animate-[spin_1.5s_linear_infinite_reverse]"></div>
               </div>
-              <p className="text-white/70 tracking-[0.3em] text-sm uppercase font-bold animate-pulse">Connecting to Neural Engine...</p>
+              <p className="text-[#4a453f]/80 tracking-[0.25em] text-sm uppercase font-bold animate-pulse">Folding Origami Studio...</p>
             </div>
           </motion.div>
         )}
