@@ -4,8 +4,12 @@
 
 @layer base {
   body {
-    @apply bg-black text-white overflow-hidden select-none;
-    font-family: 'Outfit', system-ui, sans-serif;
+    @apply overflow-hidden select-none bg-[#f5f2eb] text-[#2c2b29];
+    font-family: 'Patrick Hand', 'Outfit', system-ui, sans-serif;
+    background-image: 
+      radial-gradient(rgba(74, 69, 63, 0.05) 1.5px, transparent 0),
+      radial-gradient(rgba(74, 69, 63, 0.03) 2px, transparent 0);
+    background-size: 16px 16px, 32px 32px;
   }
 }
 

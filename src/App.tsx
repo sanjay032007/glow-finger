@@ -117,16 +117,12 @@ const AnimatedBlock = ({
   );
 };
 
-const NEON_COLORS = ['#00f3ff', '#b026ff', '#ff007f', '#39ff14', '#ff8c00', '#ffffff'];
+
 const PAPER_COLORS = ['#2c2b29', '#c45c55', '#d4a34b', '#7c8e65', '#59708f', '#b87a55'];
 
 function App() {
-  const [theme, setTheme] = useState<'NEON' | 'PAPERCRAFT'>('PAPERCRAFT');
-  const COLORS = theme === 'PAPERCRAFT' ? PAPER_COLORS : NEON_COLORS;
-  
-  useEffect(() => {
-    setColor(theme === 'PAPERCRAFT' ? PAPER_COLORS[0] : NEON_COLORS[0]);
-  }, [theme]);
+  const theme = 'PAPERCRAFT';
+  const COLORS = PAPER_COLORS;
 
   const [isLaunched, setIsLaunched] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null!);
@@ -541,7 +537,7 @@ const gameEngine = useGameEngine();
                   href="#" 
                   onMouseEnter={handleHover}
                   className={`text-sm font-semibold tracking-wide transition-colors ${
-                    theme === 'PAPERCRAFT' ? 'text-[#5c5952] hover:text-[#2c2b29]' : 'text-white/50 hover:text-white'
+                    theme === 'PAPERCRAFT' ? 'text-[#5c5952] hover:text-[#2c2b29]' : 'text-[#4a453f]/70 hover:text-[#4a453f]'
                   }`}
                 >
                   {item}
@@ -600,11 +596,7 @@ const gameEngine = useGameEngine();
                 <button 
                   onClick={handleLaunch}
                   onMouseEnter={handleHover}
-                  className={`relative z-10 group font-extrabold text-xl px-12 py-6 rounded-3xl overflow-hidden transition-all duration-500 flex items-center gap-4 cursor-pointer ${
-                    theme === 'PAPERCRAFT' 
-                      ? 'bg-[#faf8f5] border border-[#dedacf] text-[#2c2b29] shadow-md hover:bg-[#ebe7df]/50' 
-                      : 'bg-white text-black'
-                  }`}
+                  className="relative z-10 group font-extrabold text-xl px-12 py-6 rounded-3xl bg-[#faf8f5] border-2 border-[#4a453f] text-[#2c2b29] shadow-[4px_4px_0px_#4a453f] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[3px_3px_0px_#4a453f] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition-all duration-150 flex items-center gap-4 cursor-pointer"
                 >
                   <div className="absolute inset-0 bg-gradient-to-r from-[#00f3ff] via-[#b026ff] to-[#ff007f] opacity-0 group-hover:opacity-20 transition-opacity duration-500"></div>
                   <Play className="w-6 h-6 fill-black group-hover:fill-transparent transition-all" />
@@ -673,61 +665,27 @@ const gameEngine = useGameEngine();
       onClick={() => setShowColorPicker(false)}
     >
 
-      {/* Theme Switcher */}
-      {!gameEngine.isGameMode && (
-        <div className={`absolute top-8 right-8 z-50 rounded-full p-1.5 flex gap-1 shadow-2xl transition-all duration-300 ${
-          theme === 'PAPERCRAFT' 
-            ? 'bg-[#faf8f5]/80 border border-[#dedacf] shadow-[0_10px_30px_rgba(40,30,20,0.08)]' 
-            : 'bg-[#131317]/80 border border-white/10 backdrop-blur-2xl'
-        }`}>
-          <button
-            onClick={() => { setTheme('NEON'); audio.playClick(); }}
-            className={`px-4 py-2 rounded-full font-bold text-[10px] uppercase tracking-widest transition-all ${
-              theme === 'NEON' 
-                ? 'bg-[#00f3ff]/20 text-[#00f3ff] shadow-[0_0_15px_rgba(0,243,255,0.3)] border border-[#00f3ff]/50' 
-                : theme === 'PAPERCRAFT'
-                  ? 'text-[#5c5952] hover:bg-[#5c5952]/5 border border-transparent'
-                  : 'text-white/50 hover:bg-white/5 border border-transparent'
-            }`}
-          >
-            ⚡ Neon
-          </button>
-          <button
-            onClick={() => { setTheme('PAPERCRAFT'); audio.playClick(); }}
-            className={`px-4 py-2 rounded-full font-bold text-[10px] uppercase tracking-widest transition-all ${
-              theme === 'PAPERCRAFT' 
-                ? 'bg-[#d4a34b]/20 text-[#8a6d3b] shadow-[0_0_15px_rgba(138,109,59,0.3)] border border-[#8a6d3b]/50' 
-                : 'text-white/50 hover:bg-white/5 border border-transparent'
-            }`}
-          >
-            📄 Papercraft
-          </button>
-        </div>
-      )}
+
 
       {/* Page Switcher */}
       {isLaunched && !gameEngine.isGameMode && (
-        <div className={`absolute top-8 left-8 z-50 rounded-full p-1.5 flex gap-1 shadow-2xl transition-all duration-300 ${
-          theme === 'PAPERCRAFT' 
-            ? 'bg-[#faf8f5]/90 border border-[#dedacf]/60 shadow-[0_10px_30px_rgba(40,30,20,0.08)]' 
-            : 'bg-[#131317]/80 border border-white/10 backdrop-blur-2xl hover:border-white/20'
-        }`}>
+        <div className="absolute top-8 left-8 z-50 bg-[#faf8f5] border-2 border-[#4a453f] rounded-full p-1.5 flex gap-1 shadow-[3px_3px_0px_#4a453f] transition-all">
           <button
             onClick={() => { setActiveTab('DRAW'); audio.playClick(); }}
-            className={`px-5 py-2 rounded-full font-bold text-xs uppercase tracking-widest transition-all ${
+            className={`px-5 py-2 rounded-full font-bold text-xs uppercase tracking-widest transition-all border ${
               activeTab === 'DRAW' 
-                ? 'bg-[#00f3ff]/20 text-[#00f3ff] shadow-[0_0_15px_rgba(0,243,255,0.3)] border border-[#00f3ff]/50' 
-                : 'text-white/50 hover:bg-white/5 border border-transparent'
+                ? 'bg-[#d4a34b]/20 text-[#8a6d3b] border-[#d4a34b]/40 shadow-inner' 
+                : 'text-[#4a453f]/60 hover:text-[#4a453f] hover:bg-[#4a453f]/5 border-transparent'
             }`}
           >
             🎨 Creative Draw
           </button>
           <button
             onClick={() => { setActiveTab('STUDIO'); audio.playClick(); }}
-            className={`px-5 py-2 rounded-full font-bold text-xs uppercase tracking-widest transition-all ${
+            className={`px-5 py-2 rounded-full font-bold text-xs uppercase tracking-widest transition-all border ${
               activeTab === 'STUDIO' 
-                ? 'bg-[#b026ff]/20 text-[#b026ff] shadow-[0_0_15px_rgba(176,38,255,0.3)] border border-[#b026ff]/50' 
-                : 'text-white/50 hover:bg-white/5 border border-transparent'
+                ? 'bg-[#b87a55]/20 text-[#b87a55] border-[#b87a55]/40 shadow-inner' 
+                : 'text-[#4a453f]/60 hover:text-[#4a453f] hover:bg-[#4a453f]/5 border-transparent'
             }`}
           >
             ✨ Gesture Studio
@@ -1043,48 +1001,48 @@ const gameEngine = useGameEngine();
             />
           </div>
 
-          <div className="shrink-0 w-px h-8 bg-white/10 mx-1 md:mx-2"></div>
+          <div className="shrink-0 w-px h-8 bg-[#4a453f]/15 mx-1 md:mx-2"></div>
 
           {/* Brushes */}
-          <button onClick={() => { audio.playClick(); setMode('DRAW'); setShowColorPicker(false); }} onMouseEnter={handleHover} className={`p-3 rounded-full transition-all ${mode === 'DRAW' ? 'bg-white/10 text-[#00f3ff]' : 'text-white/50 hover:text-white hover:bg-white/5'}`} title="Neon Pen">
+          <button onClick={() => { audio.playClick(); setMode('DRAW'); setShowColorPicker(false); }} onMouseEnter={handleHover} className={`p-3 rounded-full transition-all ${mode === 'DRAW' ? 'bg-white/10 text-[#00f3ff]' : 'text-[#4a453f]/70 hover:text-[#4a453f] hover:bg-[#4a453f]/5'}`} title="Neon Pen">
             <Palette size={20} />
           </button>
-          <button onClick={() => { audio.playClick(); setMode('COSMIC'); setShowColorPicker(false); }} onMouseEnter={handleHover} className={`p-3 rounded-full transition-all ${mode === 'COSMIC' ? 'bg-white/10 text-yellow-400' : 'text-white/50 hover:text-white hover:bg-white/5'}`} title="Cosmic Sparkles">
+          <button onClick={() => { audio.playClick(); setMode('COSMIC'); setShowColorPicker(false); }} onMouseEnter={handleHover} className={`p-3 rounded-full transition-all ${mode === 'COSMIC' ? 'bg-white/10 text-yellow-400' : 'text-[#4a453f]/70 hover:text-[#4a453f] hover:bg-[#4a453f]/5'}`} title="Cosmic Sparkles">
             <SparklesIcon size={20} />
           </button>
-          <button onClick={() => { audio.playClick(); setMode('RAINBOW'); setShowColorPicker(false); }} onMouseEnter={handleHover} className={`p-3 rounded-full transition-all ${mode === 'RAINBOW' ? 'bg-white/10 text-[#ff8c00]' : 'text-white/50 hover:text-white hover:bg-white/5'}`} title="Rainbow Path">
+          <button onClick={() => { audio.playClick(); setMode('RAINBOW'); setShowColorPicker(false); }} onMouseEnter={handleHover} className={`p-3 rounded-full transition-all ${mode === 'RAINBOW' ? 'bg-white/10 text-[#ff8c00]' : 'text-[#4a453f]/70 hover:text-[#4a453f] hover:bg-[#4a453f]/5'}`} title="Rainbow Path">
             <Rainbow size={20} />
           </button>
-          <button onClick={() => { audio.playClick(); setMode('FIRE'); setShowColorPicker(false); }} onMouseEnter={handleHover} className={`p-3 rounded-full transition-all ${mode === 'FIRE' ? 'bg-white/10 text-red-500' : 'text-white/50 hover:text-white hover:bg-white/5'}`} title="Rising Flame">
+          <button onClick={() => { audio.playClick(); setMode('FIRE'); setShowColorPicker(false); }} onMouseEnter={handleHover} className={`p-3 rounded-full transition-all ${mode === 'FIRE' ? 'bg-white/10 text-red-500' : 'text-[#4a453f]/70 hover:text-[#4a453f] hover:bg-[#4a453f]/5'}`} title="Rising Flame">
             <Flame size={20} />
           </button>
-          <button onClick={() => { audio.playClick(); setMode('LASER'); setShowColorPicker(false); }} onMouseEnter={handleHover} className={`p-3 rounded-full transition-all ${mode === 'LASER' ? 'bg-white/10 text-purple-400' : 'text-white/50 hover:text-white hover:bg-white/5'}`} title="Double Lasers">
+          <button onClick={() => { audio.playClick(); setMode('LASER'); setShowColorPicker(false); }} onMouseEnter={handleHover} className={`p-3 rounded-full transition-all ${mode === 'LASER' ? 'bg-white/10 text-purple-400' : 'text-[#4a453f]/70 hover:text-[#4a453f] hover:bg-[#4a453f]/5'}`} title="Double Lasers">
             <Zap size={20} />
           </button>
-          <button onClick={() => { audio.playClick(); setMode('ERASE'); setShowColorPicker(false); }} onMouseEnter={handleHover} className={`p-3 rounded-full transition-all ${mode === 'ERASE' ? 'bg-white/10 text-[#ff007f]' : 'text-white/50 hover:text-white hover:bg-white/5'}`} title="Erase (E)">
+          <button onClick={() => { audio.playClick(); setMode('ERASE'); setShowColorPicker(false); }} onMouseEnter={handleHover} className={`p-3 rounded-full transition-all ${mode === 'ERASE' ? 'bg-white/10 text-[#ff007f]' : 'text-[#4a453f]/70 hover:text-[#4a453f] hover:bg-[#4a453f]/5'}`} title="Erase (E)">
             <Eraser size={20} />
           </button>
           
-          <div className="hidden md:block w-px h-8 bg-white/10 mx-2"></div>
+          <div className="hidden md:block w-px h-8 bg-[#4a453f]/15 mx-2"></div>
 
           {/* Collapsible Sliders Panel Toggle */}
           <button 
             onClick={(e) => { e.stopPropagation(); audio.playClick(); setShowSliders(!showSliders); setShowColorPicker(false); }} 
             onMouseEnter={handleHover} 
-            className={`p-3 rounded-full transition-all ${showSliders ? 'bg-white/10 text-[#00f3ff]' : 'text-white/50 hover:text-white hover:bg-white/5'}`} 
+            className={`p-3 rounded-full transition-all ${showSliders ? 'bg-white/10 text-[#00f3ff]' : 'text-[#4a453f]/70 hover:text-[#4a453f] hover:bg-[#4a453f]/5'}`} 
             title="Brush Size & Glow"
           >
             <SlidersHorizontal size={20} />
           </button>
           
-          <div className="hidden md:block w-px h-8 bg-white/10 mx-2"></div>
+          <div className="hidden md:block w-px h-8 bg-[#4a453f]/15 mx-2"></div>
 
           {/* Symmetry Toggle */}
           <button 
             onClick={cycleSymmetry} 
             onMouseEnter={handleHover} 
             className={`p-3 rounded-full transition-all flex items-center justify-center gap-1 ${
-              symmetry !== 'NONE' ? 'bg-white/10 text-[#39ff14]' : 'text-white/50 hover:text-white hover:bg-white/5'
+              symmetry !== 'NONE' ? 'bg-white/10 text-[#39ff14]' : 'text-[#4a453f]/70 hover:text-[#4a453f] hover:bg-[#4a453f]/5'
             }`} 
             title={`Symmetry: ${symmetry === 'NONE' ? 'Off' : symmetry === 'HORIZONTAL' ? 'Mirror' : 'Kaleidoscope'}`}
           >
@@ -1107,52 +1065,52 @@ const gameEngine = useGameEngine();
             </button>
     
           
-          <div className="hidden md:block w-px h-8 bg-white/10 mx-2"></div>
+          <div className="hidden md:block w-px h-8 bg-[#4a453f]/15 mx-2"></div>
           
           {/* Actions */}
-          <button onClick={() => { audio.playClick(); undo(); }} onMouseEnter={handleHover} className="shrink-0 p-3 rounded-full text-white/50 hover:text-white hover:bg-white/5 transition-all" title="Undo (Z)">
+          <button onClick={() => { audio.playClick(); undo(); }} onMouseEnter={handleHover} className="shrink-0 p-3 rounded-full text-[#4a453f]/70 hover:text-[#4a453f] hover:bg-[#4a453f]/5 transition-all" title="Undo (Z)">
             <Undo size={20} />
           </button>
           <button onClick={() => { audio.playClick(); clearCanvas(); setBuiltBlocks([]); }} onMouseEnter={handleHover} className="shrink-0 p-3 rounded-full text-white/50 hover:text-red-400 hover:bg-red-500/10 transition-all" title="Clear (C)">
             <Trash2 size={20} />
           </button>
-          <button onClick={handleSaveToGallery} onMouseEnter={handleHover} className="shrink-0 p-3 rounded-full text-white/50 hover:text-[#39ff14] hover:bg-white/5 transition-all" title="Save to Local Gallery">
+          <button onClick={handleSaveToGallery} onMouseEnter={handleHover} className="shrink-0 p-3 rounded-full text-white/50 hover:text-[#39ff14] hover:bg-[#4a453f]/5 transition-all" title="Save to Local Gallery">
             <FolderHeart size={20} />
           </button>
           <button 
             onClick={cycleEnvironment} 
             onMouseEnter={handleHover} 
-            className="shrink-0 p-3 rounded-full text-white/50 hover:text-[#b026ff] hover:bg-white/5 transition-all hidden sm:block" 
+            className="shrink-0 p-3 rounded-full text-white/50 hover:text-[#b026ff] hover:bg-[#4a453f]/5 transition-all hidden sm:block" 
             title={`Environment: ${envMode}`}
           >
             <ImageIcon size={20} />
           </button>
           
-          <div className="w-px h-8 bg-white/10 mx-2 hidden sm:block"></div>
+          <div className="w-px h-8 bg-[#4a453f]/15 mx-2 hidden sm:block"></div>
 
           {/* Settings */}
-          <button onClick={() => { audio.playClick(); setShowPreview(!showPreview); }} onMouseEnter={handleHover} className={`p-3 rounded-full transition-all hidden sm:block ${showPreview ? 'text-white' : 'text-white/30 hover:bg-white/5'}`} title="Toggle Camera">
+          <button onClick={() => { audio.playClick(); setShowPreview(!showPreview); }} onMouseEnter={handleHover} className={`p-3 rounded-full transition-all hidden sm:block ${showPreview ? 'text-white' : 'text-white/30 hover:bg-[#4a453f]/5'}`} title="Toggle Camera">
              {showPreview ? <Camera size={20} /> : <X size={20} />}
           </button>
-          <button onClick={toggleRecording} onMouseEnter={handleHover} className={`p-3 rounded-full transition-all hidden sm:block ${isRecording ? 'bg-red-500/20 text-red-500 animate-pulse' : 'text-white/50 hover:text-red-400 hover:bg-white/5'}`} title="Record Video">
+          <button onClick={toggleRecording} onMouseEnter={handleHover} className={`p-3 rounded-full transition-all hidden sm:block ${isRecording ? 'bg-red-500/20 text-red-500 animate-pulse' : 'text-white/50 hover:text-red-400 hover:bg-[#4a453f]/5'}`} title="Record Video">
             <Video size={20} />
           </button>
           <button 
             onClick={toggleAudio}
             onMouseEnter={handleHover}
-            className={`p-3 rounded-full transition-all hidden sm:block ${isAudioEnabled ? 'text-[#00f3ff] bg-white/5' : 'text-white/30 hover:bg-white/5'}`}
+            className={`p-3 rounded-full transition-all hidden sm:block ${isAudioEnabled ? 'text-[#00f3ff] bg-white/5' : 'text-white/30 hover:bg-[#4a453f]/5'}`}
             title="Toggle Synth Audio"
           >
             {isAudioEnabled ? <Volume2 size={18} /> : <VolumeX size={18} />}
           </button>
 
-          <div className="hidden md:block w-px h-8 bg-white/10 mx-2"></div>
+          <div className="hidden md:block w-px h-8 bg-[#4a453f]/15 mx-2"></div>
 
           {/* Mode Toggles */}
-          <button onClick={() => { audio.playClick(); gameEngine.toggleGameMode(); }} onMouseEnter={handleHover} className={`p-3 rounded-full transition-all ${gameEngine.isGameMode ? 'bg-[#b026ff]/20 text-[#b026ff]' : 'text-white/50 hover:text-[#b026ff] hover:bg-white/5'}`} title="Arcade Mode">
+          <button onClick={() => { audio.playClick(); gameEngine.toggleGameMode(); }} onMouseEnter={handleHover} className={`p-3 rounded-full transition-all ${gameEngine.isGameMode ? 'bg-[#b026ff]/20 text-[#b026ff]' : 'text-white/50 hover:text-[#b026ff] hover:bg-[#4a453f]/5'}`} title="Arcade Mode">
             <Gamepad2 size={20} />
           </button>
-          <button onClick={() => { audio.playClick(); setShowDebug(!showDebug); }} onMouseEnter={handleHover} className={`p-3 rounded-full transition-all ${showDebug ? 'text-[#39ff14] bg-[#39ff14]/10' : 'text-white/30 hover:text-white hover:bg-white/5'}`} title="Toggle Debug">
+          <button onClick={() => { audio.playClick(); setShowDebug(!showDebug); }} onMouseEnter={handleHover} className={`p-3 rounded-full transition-all ${showDebug ? 'text-[#39ff14] bg-[#39ff14]/10' : 'text-[#4a453f]/50 hover:text-[#4a453f] hover:bg-[#4a453f]/5'}`} title="Toggle Debug">
             <Bug size={18} />
           </button>
         </div>
@@ -1289,7 +1247,7 @@ const gameEngine = useGameEngine();
                     }
                     gameEngine.toggleGameMode();
                   }}
-                  className="flex-1 bg-white/5 border border-white/10 text-white font-bold text-sm px-6 py-4 rounded-2xl hover:bg-white/10 transition-all cursor-pointer"
+                  className="flex-1 bg-[#4a453f]/5 border border-[#4a453f]/10 text-white font-bold text-sm px-6 py-4 rounded-2xl hover:bg-white/10 transition-all cursor-pointer"
                 >
                   Exit Mode
                 </button>
