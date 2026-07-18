@@ -137,7 +137,7 @@ export function Hand3D({ isMobile, handStateRef, theme = 'NEON' }: { isMobile: b
           opacity: isPaper ? 1.0 : 0.35,
           transmission: isPaper ? 0.0 : 0.9,
           thickness: isPaper ? 0.0 : 1.2,
-          flatShading: isPaper, // Faceted origami look!
+          flatShading: false, // Keep the smooth organic form of the hand
         });
         mesh.material = mat;
         materialsRef.current.solid.push(mat);

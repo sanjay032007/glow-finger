@@ -144,7 +144,7 @@ function App() {
   const [activeTab, setActiveTab] = useState<'DRAW' | 'STUDIO'>('DRAW');
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [isFlashing, setIsFlashing] = useState(false);
-  const [cameraFilter, setCameraFilter] = useState<CameraFilter>('PAPER');
+  const [cameraFilter, setCameraFilter] = useState<CameraFilter>('NORMAL');
   const [showFilterToast, setShowFilterToast] = useState(false);
   const lastGestureRef = useRef<string | null>(null);
 
