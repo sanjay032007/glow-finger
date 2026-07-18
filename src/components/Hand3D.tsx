@@ -24,7 +24,7 @@ interface SpawnedBlock {
   color: string;
 }
 
-export function Hand3D({ isMobile, handStateRef }: { isMobile: boolean; handStateRef?: React.RefObject<any> }) {
+export function Hand3D({ isMobile, handStateRef, theme = 'NEON' }: { isMobile: boolean; handStateRef?: React.RefObject<any>; theme?: 'NEON' | 'PAPERCRAFT' }) {
   const { scene } = useGLTF('/right.glb');
     const group = useRef<THREE.Group>(null!);
   // Spawned Blocks physics state
@@ -102,38 +102,40 @@ export function Hand3D({ isMobile, handStateRef }: { isMobile: boolean; handStat
   }, []);
 
   useEffect(() => {
-    // Solid Mesh Setup: Emissive holographic glass
+    // Solid Mesh Setup
     materialsRef.current.solid = [];
     scene.traverse((child) => {
       if ((child as THREE.Mesh).isMesh) {
         const mesh = child as THREE.Mesh;
+        const isPaper = theme === 'PAPERCRAFT';
         const mat = new THREE.MeshPhysicalMaterial({
-          color: new THREE.Color('#b026ff'),
-          emissive: new THREE.Color('#b026ff'),
-          emissiveIntensity: 1.2,
-          roughness: 0.15,
-          metalness: 0.1,
-          transparent: true,
-          opacity: 0.35,
-          transmission: 0.9,
-          thickness: 1.2,
+          color: isPaper ? new THREE.Color('#dfc2a5') : new THREE.Color('#b026ff'),
+          emissive: isPaper ? new THREE.Color('#000000') : new THREE.Color('#b026ff'),
+          emissiveIntensity: isPaper ? 0 : 1.2,
+          roughness: isPaper ? 0.95 : 0.15,
+          metalness: isPaper ? 0.0 : 0.1,
+          transparent: !isPaper,
+          opacity: isPaper ? 1.0 : 0.35,
+          transmission: isPaper ? 0.0 : 0.9,
+          thickness: isPaper ? 0.0 : 1.2,
         });
         mesh.material = mat;
         materialsRef.current.solid.push(mat);
       }
     });
 
-    // Wireframe Mesh Setup: Glowing cyber-mesh
+    // Wireframe Mesh Setup
     materialsRef.current.wireframe = [];
     wireframeScene.traverse((child) => {
       if ((child as THREE.Mesh).isMesh) {
         const mesh = child as THREE.Mesh;
+        const isPaper = theme === 'PAPERCRAFT';
         const mat = new THREE.MeshBasicMaterial({
-          color: new THREE.Color('#00f3ff'),
+          color: isPaper ? new THREE.Color('#5c564c') : new THREE.Color('#00f3ff'),
           wireframe: true,
           transparent: true,
-          opacity: 0.7,
-          blending: THREE.AdditiveBlending
+          opacity: isPaper ? 0.15 : 0.7,
+          blending: isPaper ? THREE.NormalBlending : THREE.AdditiveBlending
         });
         mesh.material = mat;
         materialsRef.current.wireframe.push(mat);
@@ -204,19 +206,27 @@ export function Hand3D({ isMobile, handStateRef }: { isMobile: boolean; handStat
     const t = state.clock.getElapsedTime();
     const currentGesture = handStateRef?.current?.gesture || 'NONE';
 
-    // 1. Clamped Color Cycling (strictly cyan -> purple -> pink/magenta)
-    const hueSolid = 0.5 + 0.19 * (Math.sin(t * 0.15) + 1); // 0.5 to 0.88 HSL
-    const hueWire = 0.5 + 0.19 * (Math.sin(t * 0.15 + 1.0) + 1); // Phase offset
-    const colorSolid = new THREE.Color().setHSL(hueSolid, 1.0, 0.55);
-    const colorWire = new THREE.Color().setHSL(hueWire, 1.0, 0.6);
+    // 1. Clamped Color Cycling
+    const colorSolid = new THREE.Color();
+    const colorWire = new THREE.Color();
 
-    materialsRef.current.solid.forEach((mat) => {
-      mat.color.copy(colorSolid);
-      mat.emissive.copy(colorSolid);
-    });
-    materialsRef.current.wireframe.forEach((mat) => {
-      mat.color.copy(colorWire);
-    });
+    if (theme === 'PAPERCRAFT') {
+      colorSolid.set('#dfc2a5');
+      colorWire.set('#5c564c');
+    } else {
+      const hueSolid = 0.5 + 0.19 * (Math.sin(t * 0.15) + 1); // 0.5 to 0.88 HSL
+      const hueWire = 0.5 + 0.19 * (Math.sin(t * 0.15 + 1.0) + 1); // Phase offset
+      colorSolid.setHSL(hueSolid, 1.0, 0.55);
+      colorWire.setHSL(hueWire, 1.0, 0.6);
+
+      materialsRef.current.solid.forEach((mat) => {
+        mat.color.copy(colorSolid);
+        mat.emissive.copy(colorSolid);
+      });
+      materialsRef.current.wireframe.forEach((mat) => {
+        mat.color.copy(colorWire);
+      });
+    }
 
     // 2. Bone Curling + Finger Spreading (Abduction for finger separation)
     const idleCurl = Math.sin(t * 1.5) * 0.08; 

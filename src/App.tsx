@@ -31,12 +31,14 @@ const AnimatedBlock = ({
   position, 
   color, 
   disintegratedAt, 
-  drift 
+  drift,
+  theme
 }: { 
   position: [number, number, number]; 
   color: string; 
   disintegratedAt?: number; 
   drift?: [number, number, number];
+  theme: 'NEON' | 'PAPERCRAFT';
 }) => {
   const meshRef = useRef<THREE.Mesh>(null!);
   const [scale, setScale] = useState(0);
@@ -78,25 +80,54 @@ const AnimatedBlock = ({
   return (
     <mesh ref={meshRef} position={finalPosition}>
       <boxGeometry args={[39.5, 39.5, 39.5]} />
-      <meshStandardMaterial 
-        color={color} 
-        roughness={0.95}
-        metalness={0.0}
-        flatShading={true}
-        transparent 
-        opacity={opacity} 
-      />
+      {theme === 'PAPERCRAFT' ? (
+        <meshStandardMaterial 
+          color={color} 
+          roughness={0.95}
+          metalness={0.0}
+          flatShading={true}
+          transparent 
+          opacity={opacity} 
+        />
+      ) : (
+        <meshPhysicalMaterial 
+          color={color} 
+          emissive={color} 
+          emissiveIntensity={disintegratedAt ? 0.6 * opacity : 1.2 * opacity} 
+          roughness={0.15}
+          metalness={0.3}
+          transmission={0.6}
+          thickness={2}
+          clearcoat={1}
+          clearcoatRoughness={0.1}
+          transparent 
+          opacity={0.9 * opacity} 
+        />
+      )}
       <lineSegments>
         <edgesGeometry attach="geometry" args={[new THREE.BoxGeometry(39.5, 39.5, 39.5)]} />
-        <lineBasicMaterial attach="material" color="#000000" transparent opacity={0.15 * opacity} />
+        <lineBasicMaterial 
+          attach="material" 
+          color={theme === 'PAPERCRAFT' ? "#000000" : "#ffffff"} 
+          transparent 
+          opacity={theme === 'PAPERCRAFT' ? 0.15 * opacity : 0.6 * opacity} 
+        />
       </lineSegments>
     </mesh>
   );
 };
 
-const COLORS = ['#00f3ff', '#b026ff', '#ff007f', '#39ff14', '#ff8c00', '#ffffff'];
+const NEON_COLORS = ['#00f3ff', '#b026ff', '#ff007f', '#39ff14', '#ff8c00', '#ffffff'];
+const PAPER_COLORS = ['#2c2b29', '#c45c55', '#d4a34b', '#7c8e65', '#59708f', '#b87a55'];
 
 function App() {
+  const [theme, setTheme] = useState<'NEON' | 'PAPERCRAFT'>('PAPERCRAFT');
+  const COLORS = theme === 'PAPERCRAFT' ? PAPER_COLORS : NEON_COLORS;
+  
+  useEffect(() => {
+    setColor(theme === 'PAPERCRAFT' ? PAPER_COLORS[0] : NEON_COLORS[0]);
+  }, [theme]);
+
   const [isLaunched, setIsLaunched] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null!);
   const canvasRef = useRef<HTMLCanvasElement>(null!);
@@ -332,7 +363,21 @@ function App() {
   }, [mode, activeTab, color, dimensions]);
 
 const gameEngine = useGameEngine();
-  const { clearCanvas, saveToGallery, undo } = useSmoothDrawing(canvasRef, cursorCanvasRef, handStateRef, { color, size, glow, mode, symmetry }, gameEngine, videoRef, showPreview);
+  const { clearCanvas, saveToGallery, undo } = useSmoothDrawing(
+    canvasRef, 
+    cursorCanvasRef, 
+    handStateRef, 
+    { 
+      color: theme === 'PAPERCRAFT' && color === PAPER_COLORS[0] ? '#2c2b29' : color, 
+      size, 
+      glow: theme === 'PAPERCRAFT' ? 0 : glow, 
+      mode, 
+      symmetry 
+    }, 
+    gameEngine, 
+    videoRef, 
+    showPreview
+  );
 
   
   // Cycle camera filter on gestures
@@ -441,14 +486,14 @@ const gameEngine = useGameEngine();
           <Canvas camera={{ position: [0, 0, 8], fov: 45 }}>
             
             {/* Interactive 3D Hand */}
-            <Hand3D isMobile={false} handStateRef={handStateRef} />
+            <Hand3D isMobile={false} handStateRef={handStateRef} theme={theme} />
 
             
           </Canvas>
         </div>
 
         {/* Grid Overlay */}
-        <div className="absolute inset-0 z-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImdyaWQiIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdHRlcm4gaWQ9InNtYWxsR3JpZCIgd2lkdGg9IjEwIiBoZWlnaHQ9IjEwIiBwYXR0ZXJuVW5pdHM9InVzZXJTcGFjZU9uVXNlIj48cGF0aCBkPSJNMTAgMEwwIDBMMCAxMCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJyZ2JhKDI1NSwyNTUsMjU1LDAuMDMiIHN0cm9rZS13aWR0aD0iMSIvPjwvcGF0dGVybj48cmVjdCB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIGZpbGw9InVybCgjc21hbGxHcmlkKSIvPjxwYXRoIGQ9Ik00MCAwTDAgMEwwIDQwIiBmaWxsPSJub25lIiBzdHJva2U9InJnYmEoMjU1LDI1NSwyNTUsMC4wNSkiIHN0cm9rZS13aWR0aD0iMSIvPjwvcGF0dGVybj48L2RlZnM+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0idXJsKCNncmlkKSIvPjwvc3ZnPg==')] opacity-30 pointer-events-none"></div>
+        {theme !== 'PAPERCRAFT' && <div className="absolute inset-0 z-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImdyaWQiIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdHRlcm4gaWQ9InNtYWxsR3JpZCIgd2lkdGg9IjEwIiBoZWlnaHQ9IjEwIiBwYXR0ZXJuVW5pdHM9InVzZXJTcGFjZU9uVXNlIj48cGF0aCBkPSJNMTAgMEwwIDBMMCAxMCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJyZ2JhKDI1NSwyNTUsMjU1LDAuMDMiIHN0cm9rZS13aWR0aD0iMSIvPjwvcGF0dGVybj48cmVjdCB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIGZpbGw9InVybCgjc21hbGxHcmlkKSIvPjxwYXRoIGQ9Ik00MCAwTDAgMEwwIDQwIiBmaWxsPSJub25lIiBzdHJva2U9InJnYmEoMjU1LDI1NSwyNTUsMC4wNSkiIHN0cm9rZS13aWR0aD0iMSIvPjwvcGF0dGVybj48L2RlZnM+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0idXJsKCNncmlkKSIvPjwvc3ZnPg==')] opacity-30 pointer-events-none"></div>}
 
         {/* Mini Mouse-Drawing Canvas */}
         <MiniDrawCanvas />
@@ -459,12 +504,20 @@ const gameEngine = useGameEngine();
           className="w-full max-w-7xl mx-auto px-6 py-8 flex justify-between items-center z-10 pointer-events-auto"
         >
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#00f3ff] to-[#b026ff] p-[2px]">
-              <div className="w-full h-full bg-black rounded-[10px] flex items-center justify-center">
-                <SparklesIcon className="w-5 h-5 text-[#00f3ff]" />
+            <div className={`w-10 h-10 rounded-xl p-[2px] ${
+              theme === 'PAPERCRAFT' ? 'bg-gradient-to-br from-[#8a6d3b] to-[#b87a55]' : 'bg-gradient-to-br from-[#00f3ff] to-[#b026ff]'
+            }`}>
+              <div className={`w-full h-full rounded-[10px] flex items-center justify-center ${
+                theme === 'PAPERCRAFT' ? 'bg-[#faf8f5]' : 'bg-black'
+              }`}>
+                <SparklesIcon className={`w-5 h-5 ${theme === 'PAPERCRAFT' ? 'text-[#8a6d3b]' : 'text-[#00f3ff]'}`} />
               </div>
             </div>
-            <span className="font-extrabold text-2xl tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-white to-white/70">GLOW<span className="font-light">AR</span></span>
+            <span className={`font-extrabold text-2xl tracking-widest ${
+              theme === 'PAPERCRAFT' 
+                ? 'text-[#2c2b29]' 
+                : 'text-transparent bg-clip-text bg-gradient-to-r from-white to-white/70'
+            }`}>GLOW<span className="font-light">AR</span></span>
           </div>
 
           <div className="flex items-center gap-6">
@@ -472,7 +525,11 @@ const gameEngine = useGameEngine();
             <button 
               onClick={toggleAudio}
               onMouseEnter={handleHover}
-              className="shrink-0 p-3 rounded-full bg-white/5 border border-white/10 hover:bg-white/10 transition-all text-[#00f3ff] shadow-xl cursor-pointer"
+              className={`shrink-0 p-3 rounded-full border transition-all shadow-xl cursor-pointer ${
+                theme === 'PAPERCRAFT' 
+                  ? 'bg-[#faf8f5] border-[#dedacf] text-[#8a6d3b] hover:bg-[#ebe7df]/50' 
+                  : 'bg-white/5 border-white/10 text-[#00f3ff] hover:bg-white/10'
+              }`}
               title="Toggle Audio Beat"
             >
               {isAudioEnabled ? <Volume2 size={18} /> : <VolumeX size={18} />}
@@ -483,7 +540,9 @@ const gameEngine = useGameEngine();
                   key={item} 
                   href="#" 
                   onMouseEnter={handleHover}
-                  className="text-white/50 hover:text-white text-sm font-semibold tracking-wide transition-colors"
+                  className={`text-sm font-semibold tracking-wide transition-colors ${
+                    theme === 'PAPERCRAFT' ? 'text-[#5c5952] hover:text-[#2c2b29]' : 'text-white/50 hover:text-white'
+                  }`}
                 >
                   {item}
                 </a>
@@ -511,13 +570,21 @@ const gameEngine = useGameEngine();
                 initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ duration: 0.7, delay: 0.2 }}
                 className="text-5xl md:text-7xl lg:text-8xl font-black tracking-tighter mb-6 leading-tight drop-shadow-2xl"
               >
-                <span className="text-transparent bg-clip-text bg-gradient-to-b from-white to-white/70">Paint Reality With</span><br />
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#00f3ff] via-[#b026ff] to-[#ff007f] drop-shadow-[0_0_40px_rgba(176,38,255,0.4)]">Bare Hands</span>
+                <span className={`text-transparent bg-clip-text bg-gradient-to-b ${
+                  theme === 'PAPERCRAFT' ? 'from-[#2c2b29] to-[#5c5952]' : 'from-white to-white/70'
+                }`}>Paint Reality With</span><br />
+                <span className={`text-transparent bg-clip-text bg-gradient-to-r ${
+                  theme === 'PAPERCRAFT' 
+                    ? 'from-[#8a6d3b] via-[#a88d5b] to-[#b87a55]' 
+                    : 'from-[#00f3ff] via-[#b026ff] to-[#ff007f] drop-shadow-[0_0_40px_rgba(176,38,255,0.4)]'
+                }`}>Bare Hands</span>
               </motion.h1>
               
               <motion.p 
                 initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ duration: 0.7, delay: 0.4 }}
-                className="text-white/60 text-base md:text-lg lg:text-xl max-w-xl mb-12 leading-relaxed font-light drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]"
+                className={`text-base md:text-lg lg:text-xl max-w-xl mb-12 leading-relaxed font-light ${
+                  theme === 'PAPERCRAFT' ? 'text-[#5c5952]' : 'text-white/60 drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]'
+                }`}
               >
                 No apps. No headsets. Just your camera. Experience frictionless augmented reality drawing and gaming directly in your browser.
               </motion.p>
@@ -527,11 +594,17 @@ const gameEngine = useGameEngine();
                 whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
                 className="pointer-events-auto relative group"
               >
-                <div className="absolute -inset-1 bg-gradient-to-r from-[#00f3ff] via-[#b026ff] to-[#ff007f] rounded-[26px] blur-xl opacity-35 group-hover:opacity-75 group-hover:blur-2xl transition-all duration-500 z-0"></div>
+                {theme !== 'PAPERCRAFT' && (
+                  <div className="absolute -inset-1 bg-gradient-to-r from-[#00f3ff] via-[#b026ff] to-[#ff007f] rounded-[26px] blur-xl opacity-35 group-hover:opacity-75 group-hover:blur-2xl transition-all duration-500 z-0"></div>
+                )}
                 <button 
                   onClick={handleLaunch}
                   onMouseEnter={handleHover}
-                  className="relative z-10 group bg-white text-black font-extrabold text-xl px-12 py-6 rounded-3xl overflow-hidden transition-all duration-500 flex items-center gap-4 cursor-pointer"
+                  className={`relative z-10 group font-extrabold text-xl px-12 py-6 rounded-3xl overflow-hidden transition-all duration-500 flex items-center gap-4 cursor-pointer ${
+                    theme === 'PAPERCRAFT' 
+                      ? 'bg-[#faf8f5] border border-[#dedacf] text-[#2c2b29] shadow-md hover:bg-[#ebe7df]/50' 
+                      : 'bg-white text-black'
+                  }`}
                 >
                   <div className="absolute inset-0 bg-gradient-to-r from-[#00f3ff] via-[#b026ff] to-[#ff007f] opacity-0 group-hover:opacity-20 transition-opacity duration-500"></div>
                   <Play className="w-6 h-6 fill-black group-hover:fill-transparent transition-all" />
@@ -554,12 +627,26 @@ const gameEngine = useGameEngine();
               { icon: Gamepad2, title: "Orb Smasher", desc: "Slash floating neon targets, maintain speed, and build combo scores in Arcade mode.", color: "#b026ff" },
               { icon: Video, title: "HD Capture", desc: "Record your drawing and gaming sessions in fluid 60 FPS webm format.", color: "#ff007f" }
             ].map((f, i) => (
-              <div key={i} className="bg-black/30 border border-white/5 hover:border-white/20 rounded-[2rem] p-8 text-left transition-all duration-500 hover:-translate-y-2 group backdrop-blur-xl">
-                <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-6 transition-transform duration-500 group-hover:scale-110" style={{ backgroundColor: `${f.color}15`, color: f.color, boxShadow: `0 0 30px ${f.color}20` }}>
+              <div 
+                key={i} 
+                className={`rounded-[2rem] p-8 text-left transition-all duration-500 hover:-translate-y-2 group backdrop-blur-xl border ${
+                  theme === 'PAPERCRAFT' 
+                    ? 'bg-[#faf8f5]/80 border-[#dedacf]/60 shadow-md hover:border-[#dedacf]' 
+                    : 'bg-black/30 border-white/5 hover:border-white/20'
+                }`}
+              >
+                <div 
+                  className="w-14 h-14 rounded-2xl flex items-center justify-center mb-6 transition-transform duration-500 group-hover:scale-110" 
+                  style={{ 
+                    backgroundColor: theme === 'PAPERCRAFT' ? '#8a6d3b15' : `${f.color}15`, 
+                    color: theme === 'PAPERCRAFT' ? '#8a6d3b' : f.color, 
+                    boxShadow: theme === 'PAPERCRAFT' ? 'none' : `0 0 30px ${f.color}20` 
+                  }}
+                >
                   <f.icon size={26} />
                 </div>
-                <h3 className="font-bold text-xl text-white mb-3">{f.title}</h3>
-                <p className="text-white/50 leading-relaxed">{f.desc}</p>
+                <h3 className={`font-bold text-xl mb-3 ${theme === 'PAPERCRAFT' ? 'text-[#2c2b29]' : 'text-white'}`}>{f.title}</h3>
+                <p className={`${theme === 'PAPERCRAFT' ? 'text-[#5c5952]' : 'text-white/50'} leading-relaxed`}>{f.desc}</p>
               </div>
             ))}
           </motion.div>
@@ -580,13 +667,51 @@ const gameEngine = useGameEngine();
     <motion.div 
       animate={{ x: gameEngine.shake ? [-15, 15, -10, 10, -5, 5, 0] : 0 }}
       transition={{ duration: 0.3 }}
-      className="relative w-full h-[100dvh] bg-[#050505] overflow-hidden"
+      className={`relative w-full h-[100dvh] overflow-hidden transition-colors duration-500 ${
+        theme === 'PAPERCRAFT' ? 'bg-[#f5f2eb] text-[#2c2b29]' : 'bg-[#050505] text-white'
+      }`}
       onClick={() => setShowColorPicker(false)}
     >
 
+      {/* Theme Switcher */}
+      {!gameEngine.isGameMode && (
+        <div className={`absolute top-8 right-8 z-50 rounded-full p-1.5 flex gap-1 shadow-2xl transition-all duration-300 ${
+          theme === 'PAPERCRAFT' 
+            ? 'bg-[#faf8f5]/80 border border-[#dedacf] shadow-[0_10px_30px_rgba(40,30,20,0.08)]' 
+            : 'bg-[#131317]/80 border border-white/10 backdrop-blur-2xl'
+        }`}>
+          <button
+            onClick={() => { setTheme('NEON'); audio.playClick(); }}
+            className={`px-4 py-2 rounded-full font-bold text-[10px] uppercase tracking-widest transition-all ${
+              theme === 'NEON' 
+                ? 'bg-[#00f3ff]/20 text-[#00f3ff] shadow-[0_0_15px_rgba(0,243,255,0.3)] border border-[#00f3ff]/50' 
+                : theme === 'PAPERCRAFT'
+                  ? 'text-[#5c5952] hover:bg-[#5c5952]/5 border border-transparent'
+                  : 'text-white/50 hover:bg-white/5 border border-transparent'
+            }`}
+          >
+            ⚡ Neon
+          </button>
+          <button
+            onClick={() => { setTheme('PAPERCRAFT'); audio.playClick(); }}
+            className={`px-4 py-2 rounded-full font-bold text-[10px] uppercase tracking-widest transition-all ${
+              theme === 'PAPERCRAFT' 
+                ? 'bg-[#d4a34b]/20 text-[#8a6d3b] shadow-[0_0_15px_rgba(138,109,59,0.3)] border border-[#8a6d3b]/50' 
+                : 'text-white/50 hover:bg-white/5 border border-transparent'
+            }`}
+          >
+            📄 Papercraft
+          </button>
+        </div>
+      )}
+
       {/* Page Switcher */}
       {isLaunched && !gameEngine.isGameMode && (
-        <div className="absolute top-8 left-8 z-50 bg-[#131317]/80 backdrop-blur-2xl border border-white/10 rounded-full p-1.5 flex gap-1 shadow-2xl transition-all duration-300 hover:border-white/20">
+        <div className={`absolute top-8 left-8 z-50 rounded-full p-1.5 flex gap-1 shadow-2xl transition-all duration-300 ${
+          theme === 'PAPERCRAFT' 
+            ? 'bg-[#faf8f5]/90 border border-[#dedacf]/60 shadow-[0_10px_30px_rgba(40,30,20,0.08)]' 
+            : 'bg-[#131317]/80 border border-white/10 backdrop-blur-2xl hover:border-white/20'
+        }`}>
           <button
             onClick={() => { setActiveTab('DRAW'); audio.playClick(); }}
             className={`px-5 py-2 rounded-full font-bold text-xs uppercase tracking-widest transition-all ${
@@ -639,9 +764,19 @@ const gameEngine = useGameEngine();
             {/* 3D Build Canvas (Perspective overlay) */}
             <div className="absolute inset-0 z-0 pointer-events-none">
               <Canvas camera={{ position: [150, 150, 800], fov: 45 }}>
-                <ambientLight intensity={1.0} />
-                <directionalLight position={[30, 50, 40]} intensity={1.8} />
-                <directionalLight position={[-30, -20, -10]} intensity={0.4} color="#ffffff" />
+{theme === 'PAPERCRAFT' ? (
+                  <>
+                    <ambientLight intensity={1.0} />
+                    <directionalLight position={[30, 50, 40]} intensity={1.8} />
+                    <directionalLight position={[-30, -20, -10]} intensity={0.4} color="#ffffff" />
+                  </>
+                ) : (
+                  <>
+                    <ambientLight intensity={1.5} />
+                    <directionalLight position={[10, 10, 50]} intensity={2.5} />
+                    <pointLight position={[-50, -50, 100]} intensity={2} color="#00f3ff" />
+                  </>
+                )}
                 
                 {builtBlocks.map((b, i) => {
                   const x = b.gx * 40;
@@ -654,6 +789,7 @@ const gameEngine = useGameEngine();
                       color={b.color} 
                       disintegratedAt={b.disintegratedAt}
                       drift={b.drift}
+                      theme={theme}
                     />
                   );
                 })}
