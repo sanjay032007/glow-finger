@@ -76,10 +76,10 @@ export function GallerySection() {
   return (
     <section className="interactive-gallery w-full max-w-7xl mx-auto px-6 py-20 z-10 pointer-events-auto">
       <div className="text-center mb-12">
-        <h2 className="text-4xl font-extrabold mb-3 tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-white to-white/70">
+        <h2 className="text-4xl font-extrabold mb-3 tracking-tight text-[#2c2b29]">
           Gallery of Masterpieces
         </h2>
-        <p className="text-white/40 text-sm max-w-lg mx-auto font-light leading-relaxed">
+        <p className="text-[#5c5952] text-sm max-w-lg mx-auto font-light leading-relaxed">
           Stunning artworks and gaming snapshots captured from your AR studio sessions.
         </p>
       </div>
@@ -88,9 +88,9 @@ export function GallerySection() {
         {items.map((item) => (
           <div
             key={item.id}
-            className="group relative bg-[#0f0f13]/60 border border-white/5 hover:border-white/20 rounded-[2.5rem] overflow-hidden backdrop-blur-3xl transition-all duration-500 shadow-[0_20px_40px_rgba(0,0,0,0.5)] hover:-translate-y-2"
+            className="group relative bg-[#faf8f5] border-2 border-[#4a453f] rounded-[2.5rem] overflow-hidden shadow-[4px_4px_0px_#4a453f] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[3px_3px_0px_#4a453f] transition-all duration-300"
           >
-            <div className="aspect-[4/3] w-full overflow-hidden bg-black/60 relative">
+            <div className="aspect-[4/3] w-full overflow-hidden bg-[#f0ede6] border-b-2 border-[#4a453f] relative">
               <img
                 src={item.image}
                 alt="Masterpiece"
@@ -98,19 +98,19 @@ export function GallerySection() {
               />
             </div>
             
-            <div className="p-6 flex justify-between items-center bg-black/30 border-t border-white/5">
+            <div className="p-6 flex justify-between items-center bg-[#faf8f5]">
               <div className="flex flex-col">
-                <span className="text-[10px] text-white/30 font-bold uppercase tracking-widest">
+                <span className="text-[10px] text-[#4a453f]/40 font-bold uppercase tracking-widest">
                   {item.isPreset ? 'Collection' : 'Captured'}
                 </span>
-                <span className="text-sm text-white/60 font-semibold">{item.date}</span>
+                <span className="text-sm text-[#4a453f]/70 font-semibold">{item.date}</span>
               </div>
               <div className="flex gap-2">
                 <a
                   href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`Check out this artwork I created in Glow AR Studio! 🎨✨ #GlowAR #SpatialComputing`)}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="p-3 rounded-2xl bg-[#1DA1F2]/10 text-[#1DA1F2] hover:bg-[#1DA1F2] hover:text-white transition-all duration-300"
+                  className="p-3 rounded-2xl bg-[#1DA1F2]/10 border border-[#1DA1F2]/20 text-[#1DA1F2] hover:bg-[#1DA1F2] hover:text-white transition-all duration-300"
                   title="Share to X"
                 >
                   <Share2 size={16} />
@@ -119,7 +119,7 @@ export function GallerySection() {
                 {!item.isPreset && (
                   <button
                     onClick={() => deleteItem(item.id)}
-                    className="p-3 rounded-2xl bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white transition-all duration-300"
+                    className="p-3 rounded-2xl bg-red-500/10 border border-red-500/20 text-red-500 hover:bg-red-500 hover:text-white transition-all duration-300"
                     title="Delete Snapshot"
                   >
                     <Trash2 size={16} />

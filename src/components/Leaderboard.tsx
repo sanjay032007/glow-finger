@@ -60,48 +60,48 @@ export function Leaderboard() {
     if (index === 0) return <Trophy className="text-yellow-400 drop-shadow-[0_0_10px_rgba(250,204,21,0.5)]" size={20} />;
     if (index === 1) return <Medal className="text-slate-300 drop-shadow-[0_0_10px_rgba(203,213,225,0.5)]" size={20} />;
     if (index === 2) return <Award className="text-amber-600 drop-shadow-[0_0_10px_rgba(217,119,6,0.5)]" size={20} />;
-    return <span className="text-white/40 font-bold font-mono text-sm w-5 text-center">{index + 1}</span>;
+    return <span className="text-[#4a453f]/60 font-bold font-mono text-sm w-5 text-center">{index + 1}</span>;
   };
 
   return (
     <section className="interactive-gallery w-full max-w-7xl mx-auto px-6 py-10 z-10 pointer-events-auto">
       <div className="text-center mb-8">
-        <h2 className="text-4xl font-extrabold mb-3 tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-white to-white/70">
+        <h2 className="text-4xl font-extrabold mb-3 tracking-tight text-[#2c2b29]">
           Arcade Leaderboard
         </h2>
-        <p className="text-white/40 text-sm max-w-lg mx-auto font-light leading-relaxed">
+        <p className="text-[#5c5952] text-sm max-w-lg mx-auto font-light leading-relaxed">
           The ultimate champions of the Orb Smasher target slashing challenge.
         </p>
       </div>
 
-      <div className="max-w-md mx-auto bg-[#0f0f13]/60 border border-white/5 rounded-[2.5rem] p-8 backdrop-blur-3xl shadow-[0_20px_40px_rgba(0,0,0,0.5)]">
+      <div className="max-w-md mx-auto bg-[#faf8f5] border-2 border-[#4a453f] rounded-[2.5rem] p-8 shadow-[4px_4px_0px_#4a453f]">
         <div className="space-y-4">
           {displayScores.map((item, index) => (
             <div
               key={index}
-              className={`flex items-center justify-between p-4 rounded-2xl border transition-all duration-300 ${
+              className={`flex items-center justify-between p-4 rounded-2xl border-2 transition-all duration-300 ${
                 !item.isPreset
-                  ? 'bg-[#00f3ff]/5 border-[#00f3ff]/30 shadow-[0_0_15px_rgba(0,243,255,0.15)] scale-[1.02]'
+                  ? 'bg-[#d4a34b]/10 border-[#d4a34b] shadow-inner scale-[1.02]'
                   : index === 0
-                    ? 'bg-yellow-500/5 border-yellow-500/10'
-                    : 'bg-white/[0.02] border-white/5 hover:border-white/10'
+                    ? 'bg-[#faf8f5] border-[#d4a34b]/40'
+                    : 'bg-[#faf8f5] border-[#4a453f]/20 hover:border-[#4a453f]/40'
               }`}
             >
               <div className="flex items-center gap-4">
                 {getRankIcon(index)}
                 <div className="flex flex-col">
-                  <span className={`font-bold tracking-wider flex items-center gap-1.5 ${!item.isPreset ? 'text-[#00f3ff]' : index === 0 ? 'text-yellow-400' : 'text-white/70'}`}>
+                  <span className={`font-bold tracking-wider flex items-center gap-1.5 ${!item.isPreset ? 'text-[#8a6d3b]' : index === 0 ? 'text-[#8a6d3b]' : 'text-[#2c2b29]'}`}>
                     {item.name}
                     {!item.isPreset && (
-                      <span className="text-[8px] bg-[#00f3ff]/20 text-[#00f3ff] px-1.5 py-0.5 rounded-full font-black uppercase tracking-widest">
+                      <span className="text-[8px] bg-[#d4a34b]/20 text-[#8a6d3b] px-1.5 py-0.5 rounded-full font-black uppercase tracking-widest">
                         YOU
                       </span>
                     )}
                   </span>
-                  <span className="text-[10px] text-white/30 font-medium">{item.date}</span>
+                  <span className="text-[10px] text-[#4a453f]/40 font-medium">{item.date}</span>
                 </div>
               </div>
-              <span className={`font-black text-2xl font-mono tracking-widest ${!item.isPreset ? 'text-white drop-shadow-[0_0_8px_rgba(0,243,255,0.4)]' : 'text-transparent bg-clip-text bg-gradient-to-b from-white to-white/60'}`}>
+              <span className={`font-black text-2xl font-mono tracking-widest ${!item.isPreset ? 'text-[#8a6d3b]' : 'text-[#2c2b29]'}`}>
                 {item.score}
               </span>
             </div>

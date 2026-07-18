@@ -461,21 +461,9 @@ const gameEngine = useGameEngine();
 
   if (!isLaunched) {
     return (
-      <div className="relative w-full min-h-[100dvh] bg-[#030305] text-white flex flex-col justify-between overflow-x-hidden font-sans selection:bg-[#00f3ff]/30">
+      <div className="relative w-full min-h-[100dvh] bg-[#f5f2eb] text-[#2c2b29] flex flex-col justify-between overflow-x-hidden font-sans selection:bg-[#8a6d3b]/20">
         
-        {/* Animated Background Orbs */}
-        <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
-          <motion.div 
-            animate={{ scale: [1, 1.2, 1], opacity: [0.3, 0.5, 0.3] }}
-            transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
-            className="absolute top-[-20%] left-[-10%] w-[60%] h-[60%] bg-[#00f3ff] rounded-full blur-[150px] mix-blend-screen opacity-30"
-          />
-          <motion.div 
-            animate={{ scale: [1, 1.5, 1], opacity: [0.2, 0.4, 0.2] }}
-            transition={{ duration: 10, repeat: Infinity, ease: "easeInOut", delay: 1 }}
-            className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-[#b026ff] rounded-full blur-[150px] mix-blend-screen opacity-30"
-          />
-        </div>
+
 
         {/* 3D Background & Hand Canvas with Post-Processing Bloom */}
         <div className="fixed inset-0 z-0 pointer-events-auto">
@@ -1167,37 +1155,33 @@ const gameEngine = useGameEngine();
           >
             <motion.div 
               initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, y: 20 }}
-              className="bg-[#131317]/90 border border-white/10 rounded-[2.5rem] p-10 max-w-md w-full text-center shadow-[0_0_80px_rgba(0,243,255,0.25)] relative overflow-hidden"
+              className="bg-[#faf8f5] border-2 border-[#4a453f] rounded-[2.5rem] p-10 max-w-md w-full text-center shadow-[4px_4px_0px_#4a453f] relative overflow-hidden"
             >
-              {/* Decorative glows */}
-              <div className="absolute top-0 left-1/4 w-32 h-32 bg-[#00f3ff]/10 rounded-full blur-[50px] pointer-events-none"></div>
-              <div className="absolute bottom-0 right-1/4 w-32 h-32 bg-[#b026ff]/10 rounded-full blur-[50px] pointer-events-none"></div>
-
-              <div className="w-20 h-20 bg-gradient-to-br from-[#00f3ff] to-[#b026ff] rounded-[2rem] flex items-center justify-center mx-auto mb-6 shadow-[0_0_30px_rgba(176,38,255,0.4)]">
-                <Trophy size={40} className="text-white drop-shadow-[0_2px_10px_rgba(0,0,0,0.3)] animate-pulse" />
+              <div className="w-20 h-20 bg-[#d4a34b]/20 border-2 border-[#d4a34b]/40 rounded-[2rem] flex items-center justify-center mx-auto mb-6">
+                <Trophy size={40} className="text-[#8a6d3b]" />
               </div>
 
-              <h2 className="text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-b from-white to-white/70 mb-2 tracking-tight">
+              <h2 className="text-4xl font-extrabold text-[#2c2b29] mb-2 tracking-tight">
                 {gameEngine.lives <= 0 ? 'GAME OVER' : 'ROUND COMPLETED'}
               </h2>
-              <p className="text-white/40 text-xs font-bold tracking-widest uppercase mb-8">Arcade Smasher Challenge</p>
+              <p className="text-[#4a453f]/60 text-xs font-bold tracking-widest uppercase mb-8">Arcade Smasher Challenge</p>
 
               {/* Stats Box */}
-              <div className="grid grid-cols-2 gap-4 bg-white/[0.02] border border-white/5 rounded-3xl p-6 mb-8 text-left">
+              <div className="grid grid-cols-2 gap-4 bg-[#fcfbf9] border-2 border-[#4a453f]/20 rounded-3xl p-6 mb-8 text-left">
                 <div>
-                  <span className="text-[10px] text-white/30 font-bold uppercase tracking-widest">Final Score</span>
-                  <p className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-[#00f3ff] to-[#b026ff] font-mono tracking-wider">{gameEngine.score}</p>
+                  <span className="text-[10px] text-[#4a453f]/50 font-bold uppercase tracking-widest">Final Score</span>
+                  <p className="text-3xl font-black text-[#d4a34b] font-mono tracking-wider">{gameEngine.score}</p>
                 </div>
                 <div>
-                  <span className="text-[10px] text-white/30 font-bold uppercase tracking-widest">Max Combo</span>
-                  <p className="text-3xl font-black text-white font-mono tracking-wider">{gameEngine.maxCombo}x</p>
+                  <span className="text-[10px] text-[#4a453f]/50 font-bold uppercase tracking-widest">Max Combo</span>
+                  <p className="text-3xl font-black text-[#2c2b29] font-mono tracking-wider">{gameEngine.maxCombo}x</p>
                 </div>
               </div>
 
               {/* Score Submission Input */}
               {gameEngine.score > 0 ? (
                 <div className="mb-8 text-left">
-                  <label htmlFor="player-name" className="block text-[10px] text-white/40 font-bold uppercase tracking-widest mb-2 ml-1">
+                  <label htmlFor="player-name" className="block text-[10px] text-[#4a453f]/60 font-bold uppercase tracking-widest mb-2 ml-1">
                     Enter Name for Leaderboard
                   </label>
                   <input
@@ -1205,7 +1189,7 @@ const gameEngine = useGameEngine();
                     type="text"
                     maxLength={10}
                     placeholder="ENTER NAME..."
-                    className="w-full bg-white/[0.04] border border-[#00f3ff]/30 focus:border-[#00f3ff] rounded-2xl px-5 py-4 text-white font-bold tracking-widest font-mono text-center outline-none transition-all focus:shadow-[0_0_20px_rgba(0,243,255,0.15)] placeholder:text-white/20 uppercase"
+                    className="w-full bg-[#faf8f5] border-2 border-[#4a453f] focus:border-[#d4a34b] rounded-2xl px-5 py-4 text-[#2c2b29] font-bold tracking-widest font-mono text-center outline-none transition-all placeholder:text-[#4a453f]/30 uppercase"
                     autoComplete="off"
                     autoFocus
                     onKeyDown={(e) => {
@@ -1217,10 +1201,10 @@ const gameEngine = useGameEngine();
                       }
                     }}
                   />
-                  <p className="text-[9px] text-white/30 mt-2 text-center">Press Enter to submit and replay</p>
+                  <p className="text-[9px] text-[#4a453f]/40 mt-2 text-center">Press Enter to submit and replay</p>
                 </div>
               ) : (
-                <p className="text-xs text-white/40 mb-8">Score higher than 0 to enter the leaderboard!</p>
+                <p className="text-xs text-[#4a453f]/60 mb-8">Score higher than 0 to enter the leaderboard!</p>
               )}
 
               {/* Action Buttons */}
@@ -1234,7 +1218,7 @@ const gameEngine = useGameEngine();
                     }
                     gameEngine.restartGame();
                   }}
-                  className="flex-1 bg-white text-black font-extrabold text-sm px-6 py-4 rounded-2xl hover:scale-[1.02] active:scale-[0.98] transition-all shadow-[0_0_25px_rgba(255,255,255,0.1)] hover:shadow-[0_0_40px_rgba(0,243,255,0.3)] cursor-pointer"
+                  className="flex-1 bg-[#faf8f5] border-2 border-[#4a453f] text-[#2c2b29] font-extrabold text-sm px-6 py-4 rounded-2xl shadow-[3px_3px_0px_#4a453f] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[2px_2px_0px_#4a453f] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition-all duration-150 cursor-pointer"
                 >
                   Play Again
                 </button>
@@ -1247,7 +1231,7 @@ const gameEngine = useGameEngine();
                     }
                     gameEngine.toggleGameMode();
                   }}
-                  className="flex-1 bg-[#4a453f]/5 border border-[#4a453f]/10 text-white font-bold text-sm px-6 py-4 rounded-2xl hover:bg-white/10 transition-all cursor-pointer"
+                  className="flex-1 bg-[#4a453f]/5 border-2 border-[#4a453f]/10 text-[#4a453f] font-bold text-sm px-6 py-4 rounded-2xl hover:bg-[#4a453f]/10 transition-all cursor-pointer"
                 >
                   Exit Mode
                 </button>
@@ -1258,7 +1242,7 @@ const gameEngine = useGameEngine();
                   href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`I just scored ${gameEngine.score} points with a ${gameEngine.maxCombo}x combo in Glow AR Arcade! 🌟 Can you beat my score? #GlowAR #SpatialComputing`)}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center justify-center gap-2 w-full bg-[#1DA1F2]/10 hover:bg-[#1DA1F2]/20 border border-[#1DA1F2]/30 text-[#1DA1F2] font-bold text-xs uppercase tracking-widest px-6 py-3 rounded-xl transition-all cursor-pointer"
+                  className="flex items-center justify-center gap-2 w-full bg-[#1DA1F2]/10 hover:bg-[#1DA1F2]/20 border-2 border-[#1DA1F2]/20 text-[#1DA1F2] font-bold text-xs uppercase tracking-widest px-6 py-3 rounded-xl transition-all cursor-pointer"
                 >
                   <Share2 size={16} /> Share to X
                 </a>
