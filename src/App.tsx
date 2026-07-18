@@ -1,4 +1,4 @@
-import { RoundedBox, OrbitControls } from '@react-three/drei';
+import { OrbitControls } from '@react-three/drei';
 import { useRef, useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Canvas } from '@react-three/fiber';
@@ -41,13 +41,13 @@ const AnimatedBlock = ({
   const meshRef = useRef<THREE.Mesh>(null!);
   const [scale, setScale] = useState(0);
   const [offset, setOffset] = useState<[number, number, number]>([0, 0, 0]);
-  const [opacity, setOpacity] = useState(0.8);
+  const [opacity, setOpacity] = useState(1.0);
 
   useFrame((_state, delta) => {
     if (disintegratedAt) {
       const elapsed = (performance.now() - disintegratedAt) / 1000;
       if (elapsed > 0) {
-        setOpacity(Math.max(0.8 - elapsed * 0.8, 0));
+        setOpacity(Math.max(1.0 - elapsed * 1.0, 0));
         setScale(Math.max(1 - elapsed, 0));
         if (drift) {
           setOffset([
@@ -76,27 +76,21 @@ const AnimatedBlock = ({
   ];
 
   return (
-    <RoundedBox 
-      ref={meshRef} 
-      position={finalPosition} 
-      args={[39, 39, 39]} 
-      radius={3} 
-      smoothness={4}
-    >
-      <meshPhysicalMaterial 
+    <mesh ref={meshRef} position={finalPosition}>
+      <boxGeometry args={[39.5, 39.5, 39.5]} />
+      <meshStandardMaterial 
         color={color} 
-        emissive={color} 
-        emissiveIntensity={disintegratedAt ? 0.6 * opacity : 0.6} 
-        roughness={0.15}
-        metalness={0.1}
-        transmission={0.6}
-        thickness={2}
-        clearcoat={1}
-        clearcoatRoughness={0.1}
+        roughness={0.95}
+        metalness={0.0}
+        flatShading={true}
         transparent 
         opacity={opacity} 
       />
-    </RoundedBox>
+      <lineSegments>
+        <edgesGeometry attach="geometry" args={[new THREE.BoxGeometry(39.5, 39.5, 39.5)]} />
+        <lineBasicMaterial attach="material" color="#000000" transparent opacity={0.15 * opacity} />
+      </lineSegments>
+    </mesh>
   );
 };
 
@@ -645,9 +639,9 @@ const gameEngine = useGameEngine();
             {/* 3D Build Canvas (Perspective overlay) */}
             <div className="absolute inset-0 z-0 pointer-events-none">
               <Canvas camera={{ position: [150, 150, 800], fov: 45 }}>
-                <ambientLight intensity={1.5} />
-                <directionalLight position={[10, 10, 50]} intensity={2.5} />
-                <pointLight position={[-50, -50, 100]} intensity={2} color="#00f3ff" />
+                <ambientLight intensity={1.0} />
+                <directionalLight position={[30, 50, 40]} intensity={1.8} />
+                <directionalLight position={[-30, -20, -10]} intensity={0.4} color="#ffffff" />
                 
                 {builtBlocks.map((b, i) => {
                   const x = b.gx * 40;
