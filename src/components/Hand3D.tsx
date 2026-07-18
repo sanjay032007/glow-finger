@@ -25,6 +25,18 @@ interface SpawnedBlock {
 }
 
 export function Hand3D({ isMobile, handStateRef, theme = 'NEON' }: { isMobile: boolean; handStateRef?: React.RefObject<any>; theme?: 'NEON' | 'PAPERCRAFT' }) {
+  const PAPER_PARTICLE_COLORS = useMemo(() => [
+    new THREE.Color('#c45c55'), // red
+    new THREE.Color('#d4a34b'), // yellow
+    new THREE.Color('#7c8e65'), // green
+    new THREE.Color('#59708f'), // blue
+    new THREE.Color('#b87a55')  // terracotta
+  ], []);
+
+  const getRandomPaperColor = () => {
+    return PAPER_PARTICLE_COLORS[Math.floor(Math.random() * PAPER_PARTICLE_COLORS.length)].clone();
+  };
+
   const { scene } = useGLTF('/right.glb');
     const group = useRef<THREE.Group>(null!);
   // Spawned Blocks physics state
@@ -86,20 +98,27 @@ export function Hand3D({ isMobile, handStateRef, theme = 'NEON' }: { isMobile: b
   const jointPositions = useMemo(() => new Float32Array(MAX_JOINTS * 3), []);
   const jointColors = useMemo(() => new Float32Array(MAX_JOINTS * 3), []);
 
-  // Soft glow circular particle texture
+  // Confetti / particle texture (Squares for papercraft, soft glow for neon)
   const dotTexture = useMemo(() => {
     const canvas = document.createElement('canvas');
     canvas.width = 64;
     canvas.height = 64;
     const ctx = canvas.getContext('2d')!;
-    const grad = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
-    grad.addColorStop(0, 'rgba(255, 255, 255, 1)');
-    grad.addColorStop(0.3, 'rgba(255, 255, 255, 0.8)');
-    grad.addColorStop(1, 'rgba(255, 255, 255, 0)');
-    ctx.fillStyle = grad;
-    ctx.fillRect(0, 0, 64, 64);
+    if (theme === 'PAPERCRAFT') {
+      ctx.fillStyle = '#ffffff';
+      ctx.translate(32, 32);
+      ctx.rotate(Math.PI / 4);
+      ctx.fillRect(-14, -14, 28, 28);
+    } else {
+      const grad = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
+      grad.addColorStop(0, 'rgba(255, 255, 255, 1)');
+      grad.addColorStop(0.3, 'rgba(255, 255, 255, 0.8)');
+      grad.addColorStop(1, 'rgba(255, 255, 255, 0)');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, 64, 64);
+    }
     return new THREE.CanvasTexture(canvas);
-  }, []);
+  }, [theme]);
 
   useEffect(() => {
     // Solid Mesh Setup
@@ -181,7 +200,7 @@ export function Hand3D({ isMobile, handStateRef, theme = 'NEON' }: { isMobile: b
               (Math.random() - 0.5) * 2.0 + 0.5,
               (Math.random() - 0.5) * 2.0
             ),
-            color: new THREE.Color().setHSL(0.5 + Math.random() * 0.38, 1.0, 0.6), // Cyan-Pink
+            color: theme === 'PAPERCRAFT' ? getRandomPaperColor() : new THREE.Color().setHSL(0.5 + Math.random() * 0.38, 1.0, 0.6),
             size: Math.random() * 0.2 + 0.08,
             life: 0,
             maxLife: 0.5 + Math.random() * 0.5,
@@ -360,7 +379,7 @@ export function Hand3D({ isMobile, handStateRef, theme = 'NEON' }: { isMobile: b
                 : -(Math.random() * 0.4 + 0.1), // fall downwards towards floor
               (Math.random() - 0.5) * 0.5
             ),
-            color: isIndex ? new THREE.Color('#00f3ff') : colorSolid.clone(),
+            color: theme === 'PAPERCRAFT' ? getRandomPaperColor() : (isIndex ? new THREE.Color('#00f3ff') : colorSolid.clone()),
             // Randomize particle sizes
             size: isIndex 
               ? Math.random() * 0.22 + 0.1 
@@ -616,33 +635,37 @@ export function Hand3D({ isMobile, handStateRef, theme = 'NEON' }: { isMobile: b
       <Float speed={1.5} rotationIntensity={0.2} floatIntensity={0.5}>
         <group ref={group} scale={20} position={[handX, handY, 0]}>
           
-          {/* Portal Aura Ring 1 (Inner Cyan) */}
-          <Torus ref={ring1} args={[2.0, 0.03, 8, 80]} rotation={[Math.PI / 2, 0, 0]} position={[0, 0, -0.5]}>
-            <meshPhysicalMaterial 
-              color="#00f3ff" 
-              emissive="#00f3ff" 
-              emissiveIntensity={2.5} 
-              transparent 
-              opacity={0.8} 
-              transmission={0.9} 
-              roughness={0.1}
-              thickness={0.5}
-            />
-          </Torus>
+          {/* Portal Aura Ring 1 */}
+          {theme !== 'PAPERCRAFT' && (
+            <Torus ref={ring1} args={[2.0, 0.03, 8, 80]} rotation={[Math.PI / 2, 0, 0]} position={[0, 0, -0.5]}>
+              <meshPhysicalMaterial 
+                color="#00f3ff" 
+                emissive="#00f3ff" 
+                emissiveIntensity={2.5} 
+                transparent 
+                opacity={0.8} 
+                transmission={0.9} 
+                roughness={0.1}
+                thickness={0.5}
+              />
+            </Torus>
+          )}
 
-          {/* Portal Aura Ring 2 (Outer Magenta) */}
-          <Torus ref={ring2} args={[2.4, 0.02, 8, 80]} rotation={[Math.PI / 2, 0, 0]} position={[0, 0, -0.6]}>
-            <meshPhysicalMaterial 
-              color="#b026ff" 
-              emissive="#b026ff" 
-              emissiveIntensity={2.0} 
-              transparent 
-              opacity={0.7} 
-              transmission={0.9} 
-              roughness={0.1}
-              thickness={0.5}
-            />
-          </Torus>
+          {/* Portal Aura Ring 2 */}
+          {theme !== 'PAPERCRAFT' && (
+            <Torus ref={ring2} args={[2.4, 0.02, 8, 80]} rotation={[Math.PI / 2, 0, 0]} position={[0, 0, -0.6]}>
+              <meshPhysicalMaterial 
+                color="#b026ff" 
+                emissive="#b026ff" 
+                emissiveIntensity={2.0} 
+                transparent 
+                opacity={0.7} 
+                transmission={0.9} 
+                roughness={0.1}
+                thickness={0.5}
+              />
+            </Torus>
+          )}
 
           <Center>
             {/* Solid Glass Hand Mesh */}
@@ -666,36 +689,38 @@ export function Hand3D({ isMobile, handStateRef, theme = 'NEON' }: { isMobile: b
           />
         </bufferGeometry>
         <pointsMaterial
-          size={0.25}
+          size={theme === 'PAPERCRAFT' ? 0.38 : 0.25}
           map={dotTexture}
           vertexColors
           transparent
           depthWrite={false}
-          blending={THREE.AdditiveBlending}
+          blending={theme === 'PAPERCRAFT' ? THREE.NormalBlending : THREE.AdditiveBlending}
         />
       </points>
 
-      {/* Joint Skeletal Point Cloud */}
-      <points ref={jointPointsRef}>
-        <bufferGeometry>
-          <bufferAttribute
-            attach="attributes-position"
-            args={[jointPositions, 3]}
+      {/* Joint Skeletal Point Cloud (Neon only) */}
+      {theme !== 'PAPERCRAFT' && (
+        <points ref={jointPointsRef}>
+          <bufferGeometry>
+            <bufferAttribute
+              attach="attributes-position"
+              args={[jointPositions, 3]}
+            />
+            <bufferAttribute
+              attach="attributes-color"
+              args={[jointColors, 3]}
+            />
+          </bufferGeometry>
+          <pointsMaterial
+            size={0.55} 
+            map={dotTexture}
+            vertexColors
+            transparent
+            depthWrite={false}
+            blending={THREE.AdditiveBlending}
           />
-          <bufferAttribute
-            attach="attributes-color"
-            args={[jointColors, 3]}
-          />
-        </bufferGeometry>
-        <pointsMaterial
-          size={0.55} 
-          map={dotTexture}
-          vertexColors
-          transparent
-          depthWrite={false}
-          blending={THREE.AdditiveBlending}
-        />
-      </points>
+        </points>
+      )}
 
       {/* Soft ground contact shadow for anchoring */}
       <ContactShadows 
