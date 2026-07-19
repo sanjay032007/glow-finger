@@ -11,6 +11,7 @@ import { MiniDrawCanvas } from './components/MiniDrawCanvas';
 import { GallerySection } from './components/GallerySection';
 import { Leaderboard } from './components/Leaderboard';
 import { useARTracking } from './hooks/useARTracking';
+import GestureFaceFilter from './components/GestureFaceFilter';
 import { useFaceTracking } from './hooks/useFaceTracking';
 import { FaceMaskCanvas, MASKS, type MaskId } from './components/FaceMaskCanvas';
 import { AIGestureStudio } from './components/AIGestureStudio';
@@ -141,6 +142,7 @@ function App() {
   const [showDebug, setShowDebug] = useState(false);
   const [isAudioEnabled, setIsAudioEnabled] = useState(false);
   const [envMode, setEnvMode] = useState<EnvMode>('NEON');
+  const [page, setPage] = useState<'LANDING' | 'FILTERS'>('LANDING');
     
   const [showSliders, setShowSliders] = useState(false);
   const [activeTab, setActiveTab] = useState<'DRAW' | 'STUDIO'>('DRAW');
@@ -569,6 +571,129 @@ const gameEngine = useGameEngine();
   };
 
   if (!isLaunched) {
+    if (page === 'FILTERS') {
+      return (
+        <div className="relative w-full min-h-[100dvh] bg-[#f5f2eb] text-[#2c2b29] flex flex-col justify-between overflow-x-hidden font-sans selection:bg-[#8a6d3b]/20">
+          
+          {/* Header */}
+          <motion.header 
+            initial={{ y: -50, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ duration: 0.8, ease: "easeOut" }}
+            className="w-full max-w-7xl mx-auto px-6 py-8 flex justify-between items-center z-10 pointer-events-auto"
+          >
+            <div className="flex items-center gap-3 cursor-pointer" onClick={() => setPage('LANDING')}>
+              <div className={`w-10 h-10 rounded-xl p-[2px] ${
+                theme === 'PAPERCRAFT' ? 'bg-gradient-to-br from-[#8a6d3b] to-[#b87a55]' : 'bg-gradient-to-br from-[#00f3ff] to-[#b026ff]'
+              }`}>
+                <div className={`w-full h-full rounded-[10px] flex items-center justify-center ${
+                  theme === 'PAPERCRAFT' ? 'bg-[#faf8f5]' : 'bg-black'
+                }`}>
+                  <SparklesIcon className={`w-5 h-5 ${theme === 'PAPERCRAFT' ? 'text-[#8a6d3b]' : 'text-[#00f3ff]'}`} />
+                </div>
+              </div>
+              <span className={`font-extrabold text-2xl tracking-widest ${
+                theme === 'PAPERCRAFT' 
+                  ? 'text-[#2c2b29]' 
+                  : 'text-transparent bg-clip-text bg-gradient-to-r from-white to-white/70'
+              }`}>GLOW<span className="font-light">AR</span></span>
+            </div>
+
+            <div className="flex items-center gap-6">
+              <button 
+                onClick={toggleAudio}
+                onMouseEnter={handleHover}
+                className={`shrink-0 p-3 rounded-full border transition-all shadow-xl cursor-pointer ${
+                  theme === 'PAPERCRAFT' 
+                    ? 'bg-[#faf8f5] border-[#dedacf] text-[#8a6d3b] hover:bg-[#ebe7df]/50' 
+                    : 'bg-white/5 border-white/10 text-[#00f3ff] hover:bg-white/10'
+                }`}
+                title="Toggle Audio Beat"
+              >
+                {isAudioEnabled ? <Volume2 size={18} /> : <VolumeX size={18} />}
+              </button>
+              <div className="hidden md:flex gap-8">
+                {['Features', 'How it Works', 'Gallery', 'Face Filters'].map((item) => (
+                  <a 
+                    key={item} 
+                    href={item === 'Face Filters' ? '#filters' : '#'} 
+                    onClick={(e) => {
+                      if (item === 'Face Filters') {
+                        e.preventDefault();
+                        setPage('FILTERS');
+                      } else {
+                        e.preventDefault();
+                        setPage('LANDING');
+                      }
+                    }}
+                    onMouseEnter={handleHover}
+                    className={`text-sm font-semibold tracking-wide transition-colors ${
+                      theme === 'PAPERCRAFT' ? 'text-[#5c5952] hover:text-[#2c2b29]' : 'text-[#4a453f]/70 hover:text-[#4a453f]'
+                    } ${item === 'Face Filters' ? 'font-extrabold text-[#2c2b29] border-b-2 border-[#8a6d3b]' : ''}`}
+                  >
+                    {item}
+                  </a>
+                ))}
+              </div>
+            </div>
+          </motion.header>
+
+          {/* Main Content Area */}
+          <main className="flex-1 w-full max-w-7xl mx-auto px-6 flex flex-col justify-center z-10 py-12 pointer-events-auto">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center w-full">
+              {/* Left Column: Info Card */}
+              <div className="lg:col-span-5 flex flex-col items-center lg:items-start text-center lg:text-left">
+                <motion.div 
+                  initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ duration: 0.5 }}
+                  className="inline-flex items-center gap-2 bg-[#8a6d3b]/10 border border-[#8a6d3b]/30 rounded-full px-5 py-2 text-xs text-[#8a6d3b] font-bold tracking-widest uppercase mb-6"
+                >
+                  <SparklesIcon className="w-4 h-4" />
+                  Real-time Canvas Effects
+                </motion.div>
+                
+                <h1 className="text-4xl md:text-5xl font-black tracking-tight text-[#2c2b29] mb-6 leading-tight">
+                  Hand-Gesture<br />
+                  <span className="text-[#8a6d3b]">Face Filters</span>
+                </h1>
+                
+                <p className="text-[#5c5952] text-base leading-relaxed mb-8 font-light">
+                  Experience 16 vintage, retro, anime, and pixelated visual styles applied live to your camera feed.
+                  Simply raise your <strong>Open Palm ✋</strong> to trigger the next style!
+                </p>
+
+                <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
+                  <button 
+                    onClick={() => setPage('LANDING')}
+                    className="px-8 py-4 rounded-2xl font-extrabold text-base border-2 border-[#4a453f] bg-transparent text-[#4a453f] hover:bg-[#4a453f]/5 cursor-pointer transition-all"
+                  >
+                    ← Back Home
+                  </button>
+                  <button 
+                    onClick={handleLaunch}
+                    className="px-8 py-4 rounded-2xl font-extrabold text-base bg-[#f5d060] border-2 border-[#4a453f] text-[#2c2b29] shadow-[3px_3px_0px_#4a453f] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[2px_2px_0px_#4a453f] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none cursor-pointer transition-all"
+                  >
+                    Launch Drawing Studio
+                  </button>
+                </div>
+              </div>
+              
+              {/* Right Column: Face Filter Component Container */}
+              <div className="lg:col-span-7 w-full flex justify-center">
+                <motion.div 
+                  initial={{ y: 30, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ duration: 0.6, delay: 0.2 }}
+                  className="w-full max-w-[640px] p-4 bg-[#faf8f5] border-2 border-[#4a453f] rounded-[2rem] shadow-[8px_8px_0px_#4a453f]"
+                >
+                  <GestureFaceFilter />
+                </motion.div>
+              </div>
+            </div>
+          </main>
+
+          <footer className="w-full py-8 text-center text-[#5c5952]/40 text-sm font-medium z-10">
+            <p>Powered by MediaPipe &middot; 2026</p>
+          </footer>
+        </div>
+      );
+    }
+
     return (
       <div className="relative w-full min-h-[100dvh] bg-[#f5f2eb] text-[#2c2b29] flex flex-col justify-between overflow-x-hidden font-sans selection:bg-[#8a6d3b]/20">
         
@@ -600,7 +725,7 @@ const gameEngine = useGameEngine();
           initial={{ y: -50, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ duration: 0.8, ease: "easeOut" }}
           className="w-full max-w-7xl mx-auto px-6 py-8 flex justify-between items-center z-10 pointer-events-auto"
         >
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 cursor-pointer" onClick={() => setPage('LANDING')}>
             <div className={`w-10 h-10 rounded-xl p-[2px] ${
               theme === 'PAPERCRAFT' ? 'bg-gradient-to-br from-[#8a6d3b] to-[#b87a55]' : 'bg-gradient-to-br from-[#00f3ff] to-[#b026ff]'
             }`}>
@@ -632,14 +757,23 @@ const gameEngine = useGameEngine();
               {isAudioEnabled ? <Volume2 size={18} /> : <VolumeX size={18} />}
             </button>
             <div className="hidden md:flex gap-8">
-              {['Features', 'How it Works', 'Gallery'].map((item) => (
+              {['Features', 'How it Works', 'Gallery', 'Face Filters'].map((item) => (
                 <a 
                   key={item} 
-                  href="#" 
+                  href={item === 'Face Filters' ? '#filters' : '#'} 
+                  onClick={(e) => {
+                    if (item === 'Face Filters') {
+                      e.preventDefault();
+                      setPage('FILTERS');
+                    } else {
+                      e.preventDefault();
+                      setPage('LANDING');
+                    }
+                  }}
                   onMouseEnter={handleHover}
                   className={`text-sm font-semibold tracking-wide transition-colors ${
-                    theme === 'PAPERCRAFT' ? 'text-[#5c5952] hover:text-[#2c2b29]' : 'text-[#4a453f]/70 hover:text-[#4a453f]'
-                  }`}
+                    theme === 'PAPERCRAFT' ? 'text-[#5c5952] hover:text-[#2c2b29]' : 'text-white/70 hover:text-white'
+                  } ${item === 'Face Filters' && page === ('FILTERS' as any) ? 'font-extrabold text-[#2c2b29] border-b-2 border-[#8a6d3b]' : ''}`}
                 >
                   {item}
                 </a>
