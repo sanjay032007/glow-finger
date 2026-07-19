@@ -14,7 +14,7 @@ import { useARTracking } from './hooks/useARTracking';
 import GestureFaceFilter from './components/GestureFaceFilter';
 import { useFaceTracking } from './hooks/useFaceTracking';
 import { FaceMaskCanvas, MASKS, type MaskId } from './components/FaceMaskCanvas';
-import { AIGestureStudio } from './components/AIGestureStudio';
+
 import { useSmoothDrawing, type DrawMode, type SymmetryMode } from './hooks/useSmoothDrawing';
 import { useGameEngine } from './hooks/useGameEngine';
 import { Onboarding } from './components/Onboarding';
@@ -145,7 +145,7 @@ function App() {
   const [page, setPage] = useState<'LANDING' | 'FILTERS'>('LANDING');
     
   const [showSliders, setShowSliders] = useState(false);
-  const [activeTab, setActiveTab] = useState<'DRAW' | 'STUDIO' | 'FILTERS'>('DRAW');
+  const [activeTab, setActiveTab] = useState<'DRAW' | 'FILTERS'>('DRAW');
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [isFlashing, setIsFlashing] = useState(false);
   const [cameraFilter, setCameraFilter] = useState<CameraFilter>('NORMAL');
@@ -915,16 +915,7 @@ const gameEngine = useGameEngine();
           >
             🎨 Creative Draw
           </button>
-          <button
-            onClick={() => { setActiveTab('STUDIO'); audio.playClick(); }}
-            className={`px-5 py-2 rounded-full font-bold text-xs uppercase tracking-widest transition-all border ${
-              activeTab === 'STUDIO' 
-                ? 'bg-[#b87a55]/20 text-[#b87a55] border-[#b87a55]/40 shadow-inner' 
-                : 'text-[#4a453f]/60 hover:text-[#4a453f] hover:bg-[#4a453f]/5 border-transparent'
-            }`}
-          >
-            ✨ Gesture Studio
-          </button>
+
           <button
             onClick={() => { setActiveTab('FILTERS'); audio.playClick(); }}
             className={`px-5 py-2 rounded-full font-bold text-xs uppercase tracking-widest transition-all border ${
@@ -1060,8 +1051,6 @@ const gameEngine = useGameEngine();
     
       
         </>
-      ) : activeTab === 'STUDIO' ? (
-        <AIGestureStudio />
       ) : (
         <div className="flex-1 w-full max-w-4xl mx-auto px-6 flex flex-col justify-center py-24 select-none pointer-events-auto">
           <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-center w-full">
