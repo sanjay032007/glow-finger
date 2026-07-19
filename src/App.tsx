@@ -11,6 +11,8 @@ import { MiniDrawCanvas } from './components/MiniDrawCanvas';
 import { GallerySection } from './components/GallerySection';
 import { Leaderboard } from './components/Leaderboard';
 import { useARTracking } from './hooks/useARTracking';
+import { useFaceTracking } from './hooks/useFaceTracking';
+import { FaceMaskCanvas, MASKS, type MaskId } from './components/FaceMaskCanvas';
 import { AIGestureStudio } from './components/AIGestureStudio';
 import { useSmoothDrawing, type DrawMode, type SymmetryMode } from './hooks/useSmoothDrawing';
 import { useGameEngine } from './hooks/useGameEngine';
@@ -145,6 +147,9 @@ function App() {
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [isFlashing, setIsFlashing] = useState(false);
   const [cameraFilter, setCameraFilter] = useState<CameraFilter>('NORMAL');
+  const [activeMask, setActiveMask] = useState<MaskId | null>(null);
+  const [faceAREnabled, setFaceAREnabled] = useState(false);
+  const lastTwoHandGestureRef = useRef<number>(0);
   const [showFilterToast, setShowFilterToast] = useState(false);
   const lastGestureRef = useRef<string | null>(null);
 
@@ -206,12 +211,20 @@ function App() {
     });
   };
 
-  const { isReady, error, handStateRef, debugInfo } = useARTracking(
+  const { isReady, error, handStateRef, secondHandLandmarksRef, debugInfo } = useARTracking(
     videoRef, 
     dimensions.width, 
     dimensions.height, 
     isLaunched
   );
+  const { faceLandmarks } = useFaceTracking(
+    videoRef,
+    dimensions.width,
+    dimensions.height,
+    isLaunched,
+    faceAREnabled
+  );
+
   const [builtBlocks, setBuiltBlocks] = useState<{ 
     gx: number; 
     gy: number; 
@@ -410,6 +423,45 @@ function App() {
       animId = requestAnimationFrame(loop);
     };
 
+    animId = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(animId);
+  }, [isLaunched, activeTab]);
+  // Two-hand spread → cycle face AR mask
+  useEffect(() => {
+    if (!isLaunched || activeTab !== 'DRAW') return;
+    let animId: number;
+    const loop = () => {
+      const h1 = handStateRef.current;
+      const h2Lm = secondHandLandmarksRef.current;
+      if (h1?.landmarks && h1.landmarks.length >= 21 && h2Lm && h2Lm.length >= 21) {
+        // Both hands detected — check if both palms are open and spread wide
+        const h1Palm = h1.gesture === 'PALM';
+        // Check second hand: all fingertips above their pip (open palm check)
+        const h2IndexUp = h2Lm[8].y < h2Lm[6].y;
+        const h2MiddleUp = h2Lm[12].y < h2Lm[10].y;
+        const h2PinkyUp = h2Lm[20].y < h2Lm[18].y;
+        const h2Palm = h2IndexUp && h2MiddleUp && h2PinkyUp;
+        // Distance between wrists
+        const wrist1 = h1.landmarks[0];
+        const wrist2 = h2Lm[0];
+        const wristDist = Math.hypot(wrist1.x - wrist2.x, wrist1.y - wrist2.y);
+        const now = performance.now();
+        if (h1Palm && h2Palm && wristDist > 280 && (now - lastTwoHandGestureRef.current) > 1500) {
+          lastTwoHandGestureRef.current = now;
+          setFaceAREnabled(true);
+          setActiveMask(prev => {
+            if (!prev) return MASKS[0].id;
+            const idx = MASKS.findIndex(m => m.id === prev);
+            const next = (idx + 1) % MASKS.length;
+            // After last mask, disable AR
+            if (next === 0) { setFaceAREnabled(false); return null; }
+            return MASKS[next].id;
+          });
+          audio.playHover();
+        }
+      }
+      animId = requestAnimationFrame(loop);
+    };
     animId = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(animId);
   }, [isLaunched, activeTab]);
@@ -761,10 +813,62 @@ const gameEngine = useGameEngine();
       
       <CameraFilters />
       <CameraView videoRef={videoRef} showPreview={showPreview} cameraFilter={cameraFilter} />
+      {/* Face AR active badge */}
+      {faceAREnabled && activeMask && (
+        <div style={{
+          position: 'absolute', top: 80, left: '50%', transform: 'translateX(-50%)',
+          background: 'rgba(250,246,240,0.92)', border: '2px solid #2c2b29',
+          borderRadius: 20, padding: '4px 16px', zIndex: 60, fontSize: 13, fontWeight: 700,
+          color: '#2c2b29', boxShadow: '3px 3px 0 #2c2b29', display: 'flex', alignItems: 'center', gap: 6,
+        }}>
+          {MASKS.find(m => m.id === activeMask)?.emoji} Face AR: {MASKS.find(m => m.id === activeMask)?.label}
+        </div>
+      )}
 
       
 
             <DrawingCanvas canvasRef={canvasRef} cursorCanvasRef={cursorCanvasRef} width={dimensions.width} height={dimensions.height} />
+      {/* Face AR mask overlay */}
+      <FaceMaskCanvas
+        landmarks={faceLandmarks}
+        width={dimensions.width}
+        height={dimensions.height}
+        maskId={activeMask}
+      />
+
+      {/* Face AR mask selector — appears when faceAREnabled */}
+      {faceAREnabled && (
+        <div style={{
+          position: 'absolute', bottom: 90, left: '50%', transform: 'translateX(-50%)',
+          display: 'flex', gap: 8, zIndex: 50, background: 'rgba(250,246,240,0.92)',
+          borderRadius: 24, padding: '8px 14px', border: '2px solid #2c2b29',
+          boxShadow: '4px 4px 0 #2c2b29',
+        }}>
+          {MASKS.map(m => (
+            <button
+              key={m.id}
+              onClick={() => setActiveMask(prev => prev === m.id ? null : m.id)}
+              title={m.label}
+              style={{
+                width: 44, height: 44, borderRadius: 12, border: '2px solid',
+                borderColor: activeMask === m.id ? '#2c2b29' : 'transparent',
+                background: activeMask === m.id ? '#f5d060' : 'transparent',
+                fontSize: 22, cursor: 'pointer', transition: 'all 0.2s',
+                transform: activeMask === m.id ? 'scale(1.15)' : 'scale(1)',
+              }}
+            >
+              {m.emoji}
+            </button>
+          ))}
+          <button
+            onClick={() => { setFaceAREnabled(false); setActiveMask(null); }}
+            style={{
+              width: 44, height: 44, borderRadius: 12, border: '2px solid #c45c55',
+              background: 'transparent', fontSize: 16, cursor: 'pointer', color: '#c45c55', fontWeight: 700
+            }}
+          >✕</button>
+        </div>
+      )}
 
 
 

@@ -24,7 +24,7 @@ const preloadModel = () => {
           delegate: 'GPU'
         },
         runningMode: 'VIDEO',
-        numHands: 1,
+        numHands: 2,
         minHandDetectionConfidence: 0.6,
         minHandPresenceConfidence: 0.6,
         minTrackingConfidence: 0.6
@@ -50,6 +50,7 @@ export const useARTracking = (
   const debugRef = useRef({ frames: 0, results: 0, gesture: 'NONE', x: 0, y: 0, z: 0 });
 
   const handStateRef = useRef<HandState>({ position: null, gesture: 'NONE' });
+  const secondHandLandmarksRef = useRef<{ x: number; y: number; z: number }[] | null>(null);
 
   useEffect(() => {
     if (!isLaunched) return;
@@ -137,8 +138,22 @@ export const useARTracking = (
               debugRef.current.y = indexTip.y;
               debugRef.current.z = indexTip.z;
               debugRef.current.results++;
+
+              // Second hand tracking for two-hand gesture detection
+              if (result.landmarks.length > 1) {
+                const raw2 = result.landmarks[1] as NormalizedLandmark[];
+                const lm2 = raw2.map((lm) => ({
+                  x: (1 - lm.x) * videoWidth * scale - offsetX,
+                  y: lm.y * videoHeight * scale - offsetY,
+                  z: lm.z,
+                }));
+                secondHandLandmarksRef.current = lm2;
+              } else {
+                secondHandLandmarksRef.current = null;
+              }
             } else {
               handStateRef.current = { position: null, gesture: 'NONE', landmarks: undefined };
+              secondHandLandmarksRef.current = null;
               debugRef.current.gesture = 'NONE';
             }
           }
@@ -170,5 +185,5 @@ export const useARTracking = (
     };
   }, [isLaunched, videoRef, canvasWidth, canvasHeight]);
 
-  return { isReady, error, handStateRef, debugInfo };
+  return { isReady, error, handStateRef, secondHandLandmarksRef, debugInfo };
 };
