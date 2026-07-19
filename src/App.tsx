@@ -24,7 +24,7 @@ import { audio } from './utils/audio';
 import { 
   Palette, Eraser, Camera, Trash2, Undo, Video, Bug, 
   Sparkles as SparklesIcon, Gamepad2, Trophy, Flame, Play, X, 
-  Volume2, VolumeX, Zap, Rainbow, FolderHeart, Repeat, SlidersHorizontal, Share2, Image as ImageIcon, Box
+  Volume2, VolumeX, Zap, Rainbow, FolderHeart, Repeat, SlidersHorizontal, Share2, Image as ImageIcon, Box, Smile
 } from 'lucide-react';
 
 
@@ -145,7 +145,7 @@ function App() {
   const [page, setPage] = useState<'LANDING' | 'FILTERS'>('LANDING');
     
   const [showSliders, setShowSliders] = useState(false);
-  const [activeTab, setActiveTab] = useState<'DRAW' | 'STUDIO'>('DRAW');
+  const [activeTab, setActiveTab] = useState<'DRAW' | 'STUDIO' | 'FILTERS'>('DRAW');
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [isFlashing, setIsFlashing] = useState(false);
   const [cameraFilter, setCameraFilter] = useState<CameraFilter>('NORMAL');
@@ -925,6 +925,16 @@ const gameEngine = useGameEngine();
           >
             ✨ Gesture Studio
           </button>
+          <button
+            onClick={() => { setActiveTab('FILTERS'); audio.playClick(); }}
+            className={`px-5 py-2 rounded-full font-bold text-xs uppercase tracking-widest transition-all border ${
+              activeTab === 'FILTERS' 
+                ? 'bg-violet-500/20 text-violet-700 border-violet-500/40 shadow-inner' 
+                : 'text-[#4a453f]/60 hover:text-[#4a453f] hover:bg-[#4a453f]/5 border-transparent'
+            }`}
+          >
+            🎭 Face Filters
+          </button>
         </div>
       )}
       
@@ -1050,8 +1060,34 @@ const gameEngine = useGameEngine();
     
       
         </>
-      ) : (
+      ) : activeTab === 'STUDIO' ? (
         <AIGestureStudio />
+      ) : (
+        <div className="flex-1 w-full max-w-4xl mx-auto px-6 flex flex-col justify-center py-24 select-none pointer-events-auto">
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-center w-full">
+            <div className="md:col-span-5 flex flex-col items-center md:items-start text-center md:text-left">
+              <span className="inline-flex items-center gap-2 bg-violet-100 border border-violet-300 rounded-full px-5 py-2 text-xs text-violet-700 font-bold tracking-widest uppercase mb-6">
+                <Smile className="w-4 h-4 text-violet-700" />
+                Webcam Art
+              </span>
+              <h2 className="text-4xl font-black text-[#2c2b29] mb-4">Face Filters</h2>
+              <p className="text-[#5c5952] text-sm leading-relaxed mb-6 font-light">
+                Show an open palm ✋ to your camera to cycle through 16 real-time art styles!
+              </p>
+              <button 
+                onClick={() => setActiveTab('DRAW')}
+                className="px-6 py-3 rounded-xl font-bold bg-[#faf8f5] border-2 border-[#4a453f] text-[#2c2b29] shadow-[3px_3px_0px_#4a453f] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[2px_2px_0px_#4a453f] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none cursor-pointer transition-all"
+              >
+                ← Return to Canvas
+              </button>
+            </div>
+            <div className="md:col-span-7 w-full max-w-[500px] mx-auto">
+              <div className="p-3 bg-[#faf8f5] border-2 border-[#4a453f] rounded-[1.5rem] shadow-[6px_6px_0px_#4a453f]">
+                <GestureFaceFilter />
+              </div>
+            </div>
+          </div>
+        </div>
       )}
       
       {activeTab === 'DRAW' && (
@@ -1377,6 +1413,33 @@ const gameEngine = useGameEngine();
           </button>
           
           <div className="w-px h-8 bg-[#4a453f]/15 mx-2 hidden sm:block"></div>
+
+          {/* Face AR Toggle */}
+          <button 
+            onClick={() => {
+              audio.playClick();
+              if (!faceAREnabled) {
+                setFaceAREnabled(true);
+                setActiveMask(MASKS[0].id);
+              } else {
+                const idx = MASKS.findIndex(m => m.id === activeMask);
+                const next = (idx + 1) % MASKS.length;
+                if (next === 0) {
+                  setFaceAREnabled(false);
+                  setActiveMask(null);
+                } else {
+                  setActiveMask(MASKS[next].id);
+                }
+              }
+            }} 
+            onMouseEnter={handleHover} 
+            className={`shrink-0 p-3 rounded-full transition-all ${
+              faceAREnabled ? 'bg-yellow-400/20 text-yellow-500 shadow-[0_0_15px_rgba(234,179,8,0.5)] border border-yellow-400/50' : 'text-white/50 hover:bg-[#4a453f]/10 hover:text-white border border-transparent'
+            }`} 
+            title={`Face AR Mask: ${faceAREnabled && activeMask ? MASKS.find(m => m.id === activeMask)?.label : 'Off'}`}
+          >
+            <Smile size={20} />
+          </button>
 
           {/* Settings */}
           <button onClick={() => { audio.playClick(); setShowPreview(!showPreview); }} onMouseEnter={handleHover} className={`p-3 rounded-full transition-all hidden sm:block ${showPreview ? 'text-white' : 'text-white/30 hover:bg-[#4a453f]/5'}`} title="Toggle Camera">
