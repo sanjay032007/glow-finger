@@ -70,7 +70,26 @@
 
   </head>
   <body>
+    
+    <div id="initial-loader" style="position:fixed;inset:0;background:#030305;z-index:999999;display:flex;align-items:center;justify-content:center;transition:opacity 0.4s ease;flex-direction:column;gap:20px;">
+      <div style="width:40px;height:40px;border-radius:50%;border:3px solid rgba(255,255,255,0.1);border-top-color:#00f3ff;animation:spin 0.8s linear infinite;"></div>
+      <style>@keyframes spin{to{transform:rotate(360deg)}}</style>
+      <div style="color:rgba(255,255,255,0.5);font-family:sans-serif;font-weight:bold;letter-spacing:4px;font-size:10px;">LOADING STUDIO</div>
+    </div>
     <div id="root"></div>
+    <script>
+      // Remove loader when React mounts or after timeout
+      window.addEventListener('load', () => {
+        setTimeout(() => {
+          const loader = document.getElementById('initial-loader');
+          if (loader) {
+            loader.style.opacity = '0';
+            setTimeout(() => loader.remove(), 400);
+          }
+        }, 150);
+      });
+    </script>
+  
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
