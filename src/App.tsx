@@ -1,12 +1,11 @@
 import { OrbitControls } from '@react-three/drei';
-import { useRef, useState, useEffect, useCallback, lazy, Suspense } from 'react';
+import { useRef, useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Canvas } from '@react-three/fiber';
 import * as THREE from 'three';
-const CameraView = lazy(() => import('./components/CameraView').then(m => ({ default: m.CameraView })));
-import { type CameraFilter } from './components/CameraFilters';
-const CameraFilters = lazy(() => import('./components/CameraFilters').then(m => ({ default: m.CameraFilters })));
-const DrawingCanvas = lazy(() => import('./components/DrawingCanvas').then(m => ({ default: m.DrawingCanvas })));
+import { CameraView } from './components/CameraView';
+import { CameraFilters, type CameraFilter } from './components/CameraFilters';
+import { DrawingCanvas } from './components/DrawingCanvas';
 import { Hand3D } from './components/Hand3D';
 import { MiniDrawCanvas } from './components/MiniDrawCanvas';
 import { GallerySection } from './components/GallerySection';
@@ -892,8 +891,7 @@ const gameEngine = useGameEngine();
   }
 
   return (
-    <Suspense fallback={<div className="absolute inset-0 bg-[#050505] z-[99999] flex items-center justify-center text-[#00f3ff] font-bold tracking-widest text-xs">LOADING MODULES...</div>}>
-    <motion.div 
+        <motion.div 
       animate={{ x: gameEngine.shake ? [-15, 15, -10, 10, -5, 5, 0] : 0 }}
       transition={{ duration: 0.3 }}
       className={`relative w-full h-[100dvh] overflow-hidden transition-colors duration-500 ${
@@ -1608,7 +1606,6 @@ const gameEngine = useGameEngine();
         )}
       </AnimatePresence>
     </motion.div>
-    </Suspense>
   );
 }
 

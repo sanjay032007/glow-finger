@@ -67,7 +67,7 @@ export const useARTracking = (
 
     const initAndRun = async () => {
       try {
-        const isMobile = window.innerWidth < 768;
+        
         
         // Wait for preloaded model
         handLandmarker = await preloadModel();
@@ -76,8 +76,8 @@ export const useARTracking = (
         const video = videoRef.current!;
         const stream = await navigator.mediaDevices.getUserMedia({
           video: {
-            width: isMobile ? 640 : 1280,
-            height: isMobile ? 480 : 720,
+            width: { ideal: 640 },
+            height: { ideal: 480 },
             facingMode: 'user'
           },
           audio: false
