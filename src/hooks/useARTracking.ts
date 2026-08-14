@@ -34,8 +34,7 @@ const preloadModel = () => {
   return preloadedHandLandmarkerPromise;
 };
 
-// Start preloading immediately when the module is imported
-preloadModel();
+// Preloading is now deferred until isLaunched=true (see useEffect below)
 
 
 export const useARTracking = (

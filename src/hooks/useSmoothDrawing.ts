@@ -502,17 +502,6 @@ export const useSmoothDrawing = (
       }
     }
   };
-  
-  const saveDrawing = () => {
-    const canvas = canvasRef.current;
-    if (canvas) {
-      const dataUrl = canvas.toDataURL('image/png');
-      const link = document.createElement('a');
-      link.download = 'glow-finger-drawing.png';
-      link.href = dataUrl;
-      link.click();
-    }
-  };
 
   const saveToGallery = () => {
     const canvas = canvasRef.current;
@@ -574,5 +563,5 @@ export const useSmoothDrawing = (
     ctx.putImageData(previousState, 0, 0);
   };
 
-  return { clearCanvas, saveDrawing, saveToGallery, undo };
+  return { clearCanvas, saveToGallery, undo };
 };

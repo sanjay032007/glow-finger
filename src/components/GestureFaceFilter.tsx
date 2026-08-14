@@ -175,7 +175,7 @@ function thermalMap(data: Uint8ClampedArray): void {
   }
 }
 
-export interface FaceStyle {
+interface FaceStyle {
   name: string;
   cssFilter?: string;
   fx?: (img: ImageData) => void;
@@ -183,7 +183,7 @@ export interface FaceStyle {
   halftone?: boolean;
 }
 
-export const STYLES: FaceStyle[] = [
+const STYLES: FaceStyle[] = [
   { name: "Original", cssFilter: "none" },
   {
     name: "Van Gogh",
@@ -436,10 +436,15 @@ export default function GestureFaceFilter({ className = "" }: { className?: stri
       }
     }
 
+    const DETECT_INTERVAL = 1000 / 15; // 15 FPS for gesture detection
+    let lastDetectTime = 0;
+
     function detectLoop() {
       const video = videoRef.current;
       const recognizer = recognizerRef.current;
-      if (video && recognizer && video.readyState >= 2) {
+      const detectNow = performance.now();
+      if (video && recognizer && video.readyState >= 2 && (detectNow - lastDetectTime >= DETECT_INTERVAL)) {
+        lastDetectTime = detectNow;
         const now = performance.now();
         const result = recognizer.recognizeForVideo(video, now);
 

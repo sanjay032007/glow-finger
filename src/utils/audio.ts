@@ -5,6 +5,43 @@ class AudioEngine {
   private isAmbientPlaying = false;
   private chordTimeout: any = null;
 
+  private getCtx(): { ctx: AudioContext; t: number } | null {
+    this.init();
+    if (!this.ctx) return null;
+    return { ctx: this.ctx, t: this.ctx.currentTime };
+  }
+
+  private createNoiseBuffer(duration: number): AudioBuffer {
+    const bufferSize = this.ctx!.sampleRate * duration;
+    const buffer = this.ctx!.createBuffer(1, bufferSize, this.ctx!.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) {
+      data[i] = Math.random() * 2 - 1;
+    }
+    return buffer;
+  }
+
+  private playTone(freq: number, type: OscillatorType, duration: number, volume: number) {
+    const r = this.getCtx();
+    if (!r) return null;
+    const { ctx, t } = r;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, t);
+    
+    gain.gain.setValueAtTime(volume, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + duration);
+    
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    
+    osc.start(t);
+    osc.stop(t + duration);
+    return { osc, gain, t, ctx };
+  }
+
   private init() {
     if (!this.ctx) {
       this.ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
@@ -15,33 +52,17 @@ class AudioEngine {
   }
 
   playClick() {
-    this.init();
-    if (!this.ctx) return;
-    const osc = this.ctx.createOscillator();
-    const gain = this.ctx.createGain();
-    
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(800, this.ctx.currentTime);
-    osc.frequency.exponentialRampToValueAtTime(100, this.ctx.currentTime + 0.15);
-    
-    gain.gain.setValueAtTime(0.08, this.ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.15);
-    
-    osc.connect(gain);
-    gain.connect(this.ctx.destination);
-    
-    osc.start();
-    osc.stop(this.ctx.currentTime + 0.15);
+    const r = this.playTone(800, 'sine', 0.15, 0.08);
+    if (r) r.osc.frequency.exponentialRampToValueAtTime(100, r.t + 0.15);
   }
 
   playSnap() {
-    this.init();
-    if (!this.ctx) return;
-    const t = this.ctx.currentTime;
+    const r = this.getCtx();
+    if (!r) return;
+    const { ctx, t } = r;
     
-    // Impact click (High frequency pitch ramp)
-    const osc = this.ctx.createOscillator();
-    const gain = this.ctx.createGain();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
     osc.type = 'triangle';
     osc.frequency.setValueAtTime(1500, t);
     osc.frequency.exponentialRampToValueAtTime(150, t + 0.08);
@@ -49,30 +70,24 @@ class AudioEngine {
     gain.gain.setValueAtTime(0.15, t);
     gain.gain.exponentialRampToValueAtTime(0.001, t + 0.08);
     
-    // Friction click (Noise burst)
-    const bufferSize = this.ctx.sampleRate * 0.03; // 30ms noise
-    const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
-    const data = buffer.getChannelData(0);
-    for (let i = 0; i < bufferSize; i++) {
-      data[i] = Math.random() * 2 - 1;
-    }
-    const noise = this.ctx.createBufferSource();
+    const buffer = this.createNoiseBuffer(0.03);
+    const noise = ctx.createBufferSource();
     noise.buffer = buffer;
     
-    const filter = this.ctx.createBiquadFilter();
+    const filter = ctx.createBiquadFilter();
     filter.type = 'highpass';
     filter.frequency.setValueAtTime(2000, t);
     
-    const noiseGain = this.ctx.createGain();
+    const noiseGain = ctx.createGain();
     noiseGain.gain.setValueAtTime(0.1, t);
     noiseGain.gain.exponentialRampToValueAtTime(0.001, t + 0.03);
     
     noise.connect(filter);
     filter.connect(noiseGain);
-    noiseGain.connect(this.ctx.destination);
+    noiseGain.connect(ctx.destination);
     
     osc.connect(gain);
-    gain.connect(this.ctx.destination);
+    gain.connect(ctx.destination);
     
     osc.start(t);
     osc.stop(t + 0.08);
@@ -81,66 +96,52 @@ class AudioEngine {
   }
 
   playHover() {
-    this.init();
-    if (!this.ctx) return;
-    const osc = this.ctx.createOscillator();
-    const gain = this.ctx.createGain();
-    
-    osc.type = 'triangle';
-    osc.frequency.setValueAtTime(200, this.ctx.currentTime);
-    osc.frequency.linearRampToValueAtTime(400, this.ctx.currentTime + 0.08);
-    
-    gain.gain.setValueAtTime(0.03, this.ctx.currentTime);
-    gain.gain.linearRampToValueAtTime(0.001, this.ctx.currentTime + 0.08);
-    
-    osc.connect(gain);
-    gain.connect(this.ctx.destination);
-    
-    osc.start();
-    osc.stop(this.ctx.currentTime + 0.08);
+    const r = this.playTone(200, 'triangle', 0.08, 0.03);
+    if (r) {
+      r.osc.frequency.cancelScheduledValues(r.t);
+      r.osc.frequency.setValueAtTime(200, r.t);
+      r.osc.frequency.linearRampToValueAtTime(400, r.t + 0.08);
+      r.gain.gain.cancelScheduledValues(r.t);
+      r.gain.gain.setValueAtTime(0.03, r.t);
+      r.gain.gain.linearRampToValueAtTime(0.001, r.t + 0.08);
+    }
   }
 
   playSlash() {
-    this.init();
-    if (!this.ctx) return;
+    const r = this.getCtx();
+    if (!r) return;
+    const { ctx, t } = r;
     
-    const t = this.ctx.currentTime;
-    
-    const osc = this.ctx.createOscillator();
-    const gain = this.ctx.createGain();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
     
     osc.type = 'sine';
     osc.frequency.setValueAtTime(150, t);
     osc.frequency.exponentialRampToValueAtTime(1500, t + 0.12);
     
-    const bufferSize = this.ctx.sampleRate * 0.1;
-    const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
-    const data = buffer.getChannelData(0);
-    for (let i = 0; i < bufferSize; i++) {
-      data[i] = Math.random() * 2 - 1;
-    }
+    const buffer = this.createNoiseBuffer(0.1);
     
-    const noise = this.ctx.createBufferSource();
+    const noise = ctx.createBufferSource();
     noise.buffer = buffer;
 
-    const noiseFilter = this.ctx.createBiquadFilter();
+    const noiseFilter = ctx.createBiquadFilter();
     noiseFilter.type = 'bandpass';
     noiseFilter.frequency.setValueAtTime(800, t);
     noiseFilter.frequency.exponentialRampToValueAtTime(300, t + 0.12);
     
-    const noiseGain = this.ctx.createGain();
+    const noiseGain = ctx.createGain();
     noiseGain.gain.setValueAtTime(0.05, t);
     noiseGain.gain.exponentialRampToValueAtTime(0.001, t + 0.12);
     
     noise.connect(noiseFilter);
     noiseFilter.connect(noiseGain);
-    noiseGain.connect(this.ctx.destination);
+    noiseGain.connect(ctx.destination);
 
     gain.gain.setValueAtTime(0.12, t);
     gain.gain.exponentialRampToValueAtTime(0.001, t + 0.12);
     
     osc.connect(gain);
-    gain.connect(this.ctx.destination);
+    gain.connect(ctx.destination);
     
     osc.start(t);
     osc.stop(t + 0.12);
@@ -149,66 +150,61 @@ class AudioEngine {
   }
 
   playCombo() {
-    this.init();
-    if (!this.ctx) return;
-    const t = this.ctx.currentTime;
+    const r = this.getCtx();
+    if (!r) return;
+    const { ctx, t } = r;
     
     const notes = [261.63, 329.63, 392.00, 523.25];
     notes.forEach((freq, idx) => {
-      const osc = this.ctx!.createOscillator();
-      const gain = this.ctx!.createGain();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
       osc.type = 'sine';
       osc.frequency.setValueAtTime(freq, t + idx * 0.06);
       gain.gain.setValueAtTime(0.06, t + idx * 0.06);
       gain.gain.exponentialRampToValueAtTime(0.001, t + idx * 0.06 + 0.2);
       
       osc.connect(gain);
-      gain.connect(this.ctx!.destination);
+      gain.connect(ctx.destination);
       osc.start(t + idx * 0.06);
       osc.stop(t + idx * 0.06 + 0.2);
     });
   }
 
   playBomb() {
-    this.init();
-    if (!this.ctx) return;
-    const t = this.ctx.currentTime;
+    const r = this.getCtx();
+    if (!r) return;
+    const { ctx, t } = r;
     
-    const osc = this.ctx.createOscillator();
-    const gain = this.ctx.createGain();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
     
     osc.type = 'sawtooth';
     osc.frequency.setValueAtTime(100, t);
     osc.frequency.exponentialRampToValueAtTime(10, t + 0.4);
     
-    const bufferSize = this.ctx.sampleRate * 0.4;
-    const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
-    const data = buffer.getChannelData(0);
-    for (let i = 0; i < bufferSize; i++) {
-      data[i] = Math.random() * 2 - 1;
-    }
+    const buffer = this.createNoiseBuffer(0.4);
     
-    const noise = this.ctx.createBufferSource();
+    const noise = ctx.createBufferSource();
     noise.buffer = buffer;
     
-    const filter = this.ctx.createBiquadFilter();
+    const filter = ctx.createBiquadFilter();
     filter.type = 'lowpass';
     filter.frequency.setValueAtTime(200, t);
     filter.frequency.exponentialRampToValueAtTime(40, t + 0.4);
     
-    const noiseGain = this.ctx.createGain();
+    const noiseGain = ctx.createGain();
     noiseGain.gain.setValueAtTime(0.2, t);
     noiseGain.gain.exponentialRampToValueAtTime(0.001, t + 0.4);
     
     noise.connect(filter);
     filter.connect(noiseGain);
-    noiseGain.connect(this.ctx.destination);
+    noiseGain.connect(ctx.destination);
     
     gain.gain.setValueAtTime(0.3, t);
     gain.gain.exponentialRampToValueAtTime(0.001, t + 0.4);
     
     osc.connect(gain);
-    gain.connect(this.ctx.destination);
+    gain.connect(ctx.destination);
     
     osc.start(t);
     osc.stop(t + 0.4);
@@ -217,66 +213,44 @@ class AudioEngine {
   }
 
   playFreeze() {
-    this.init();
-    if (!this.ctx) return;
-    const t = this.ctx.currentTime;
-    
-    const osc = this.ctx.createOscillator();
-    const gain = this.ctx.createGain();
-    
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(1200, t);
-    osc.frequency.linearRampToValueAtTime(600, t + 0.5);
-    
-    gain.gain.setValueAtTime(0.08, t);
-    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.5);
-    
-    const lfo = this.ctx.createOscillator();
-    const lfoGain = this.ctx.createGain();
-    lfo.type = 'sine';
-    lfo.frequency.setValueAtTime(30, t);
-    lfoGain.gain.setValueAtTime(100, t);
-    
-    lfo.connect(lfoGain);
-    lfoGain.connect(osc.frequency);
-    
-    osc.connect(gain);
-    gain.connect(this.ctx.destination);
-    
-    lfo.start(t);
-    osc.start(t);
-    lfo.stop(t + 0.5);
-    osc.stop(t + 0.5);
+    const r = this.playTone(1200, 'sine', 0.5, 0.08);
+    if (r) {
+      r.osc.frequency.linearRampToValueAtTime(600, r.t + 0.5);
+      const lfo = r.ctx.createOscillator();
+      const lfoGain = r.ctx.createGain();
+      lfo.type = 'sine';
+      lfo.frequency.setValueAtTime(30, r.t);
+      lfoGain.gain.setValueAtTime(100, r.t);
+      lfo.connect(lfoGain);
+      lfoGain.connect(r.osc.frequency);
+      lfo.start(r.t);
+      lfo.stop(r.t + 0.5);
+    }
   }
 
   playCamera() {
-    this.init();
-    if (!this.ctx) return;
-    const t = this.ctx.currentTime;
+    const r = this.getCtx();
+    if (!r) return;
+    const { ctx, t } = r;
     
-    const bufferSize = this.ctx.sampleRate * 0.12;
-    const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
-    const data = buffer.getChannelData(0);
-    for (let i = 0; i < bufferSize; i++) {
-      data[i] = Math.random() * 2 - 1;
-    }
+    const buffer = this.createNoiseBuffer(0.12);
     
-    const noise = this.ctx.createBufferSource();
+    const noise = ctx.createBufferSource();
     noise.buffer = buffer;
     
-    const filter = this.ctx.createBiquadFilter();
+    const filter = ctx.createBiquadFilter();
     filter.type = 'bandpass';
     filter.frequency.setValueAtTime(1200, t);
     filter.frequency.exponentialRampToValueAtTime(3500, t + 0.05);
     filter.frequency.exponentialRampToValueAtTime(1200, t + 0.12);
     
-    const gain = this.ctx.createGain();
+    const gain = ctx.createGain();
     gain.gain.setValueAtTime(0.18, t);
     gain.gain.exponentialRampToValueAtTime(0.001, t + 0.12);
     
     noise.connect(filter);
     filter.connect(gain);
-    gain.connect(this.ctx.destination);
+    gain.connect(ctx.destination);
     
     noise.start(t);
     noise.stop(t + 0.12);

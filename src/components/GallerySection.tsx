@@ -8,11 +8,11 @@ interface GalleryItem {
   isPreset?: boolean;
 }
 
-const NEBULA_CORE_SVG = `<svg width="800" height="600" xmlns="http://www.w3.org/2000/svg"><defs><radialGradient id="bg" cx="50%" cy="50%" r="75%"><stop offset="0%" stop-color="#09090e" /><stop offset="100%" stop-color="#020204" /></radialGradient><filter id="glow"><feGaussianBlur stdDeviation="10" result="coloredBlur"/><feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs><rect width="100%" height="100%" fill="url(#bg)"/><circle cx="400" cy="300" r="100" stroke="#00f3ff" stroke-width="4" fill="none" filter="url(#glow)"/><circle cx="400" cy="300" r="60" stroke="#b026ff" stroke-width="6" fill="none" filter="url(#glow)"/><circle cx="400" cy="300" r="30" stroke="#ff007f" stroke-width="2" fill="none" filter="url(#glow)"/><circle cx="280" cy="220" r="3" fill="#fff" filter="url(#glow)"/><circle cx="520" cy="380" r="4" fill="#fff" filter="url(#glow)"/><circle cx="340" cy="420" r="2" fill="#fff" filter="url(#glow)"/><circle cx="480" cy="180" r="3" fill="#fff" filter="url(#glow)"/></svg>`;
+const NEBULA_CORE_SVG = `<svg width="800" height="600" xmlns="http://www.w3.org/2000/svg"><defs><radialGradient id="bg" r="75%"><stop offset="0" stop-color="#09090e"/><stop offset="1" stop-color="#020204"/></radialGradient><filter id="glow"><feGaussianBlur stdDeviation="10" result="coloredBlur"/><feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs><rect width="100%" height="100%" fill="url(#bg)"/><circle cx="400" cy="300" r="100" stroke="#00f3ff" stroke-width="4" fill="none" filter="url(#glow)"/><circle cx="400" cy="300" r="60" stroke="#b026ff" stroke-width="6" fill="none" filter="url(#glow)"/><circle cx="400" cy="300" r="30" stroke="#ff007f" stroke-width="2" fill="none" filter="url(#glow)"/><circle cx="280" cy="220" r="3" fill="#fff" filter="url(#glow)"/><circle cx="520" cy="380" r="4" fill="#fff" filter="url(#glow)"/><circle cx="340" cy="420" r="2" fill="#fff" filter="url(#glow)"/><circle cx="480" cy="180" r="3" fill="#fff" filter="url(#glow)"/></svg>`;
 
-const SYMMETRIC_AURORA_SVG = `<svg width="800" height="600" xmlns="http://www.w3.org/2000/svg"><defs><radialGradient id="bg" cx="50%" cy="50%" r="75%"><stop offset="0%" stop-color="#09090e" /><stop offset="100%" stop-color="#020204" /></radialGradient><filter id="glow"><feGaussianBlur stdDeviation="8" result="coloredBlur"/><feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs><rect width="100%" height="100%" fill="url(#bg)"/><path d="M 100 100 L 700 500 M 700 100 L 100 500" stroke="#39ff14" stroke-width="4" filter="url(#glow)"/><path d="M 400 50 L 400 550 M 50 300 L 750 300" stroke="#00f3ff" stroke-width="3" filter="url(#glow)"/><polygon points="400,220 460,300 400,380 340,300" stroke="#ffb300" stroke-width="2" fill="none" filter="url(#glow)"/></svg>`;
+const SYMMETRIC_AURORA_SVG = `<svg width="800" height="600" xmlns="http://www.w3.org/2000/svg"><defs><radialGradient id="bg" r="75%"><stop offset="0" stop-color="#09090e"/><stop offset="1" stop-color="#020204"/></radialGradient><filter id="glow"><feGaussianBlur stdDeviation="8" result="coloredBlur"/><feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs><rect width="100%" height="100%" fill="url(#bg)"/><path d="M 100 100 L 700 500 M 700 100 L 100 500" stroke="#39ff14" stroke-width="4" filter="url(#glow)"/><path d="M 400 50 L 400 550 M 50 300 L 750 300" stroke="#00f3ff" stroke-width="3" filter="url(#glow)"/><polygon points="400,220 460,300 400,380 340,300" stroke="#ffb300" stroke-width="2" fill="none" filter="url(#glow)"/></svg>`;
 
-const QUANTUM_SPIRAL_SVG = `<svg width="800" height="600" xmlns="http://www.w3.org/2000/svg"><defs><radialGradient id="bg" cx="50%" cy="50%" r="75%"><stop offset="0%" stop-color="#09090e" /><stop offset="100%" stop-color="#020204" /></radialGradient><filter id="glow"><feGaussianBlur stdDeviation="12" result="coloredBlur"/><feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs><rect width="100%" height="100%" fill="url(#bg)"/><path d="M 400 300 Q 450 200, 550 250 T 350 400 T 250 200 T 550 450" fill="none" stroke="#ff8c00" stroke-width="6" filter="url(#glow)"/><path d="M 400 300 Q 450 200, 550 250 T 350 400 T 250 200 T 550 450" fill="none" stroke="#fff" stroke-width="1.5"/></svg>`;
+const QUANTUM_SPIRAL_SVG = `<svg width="800" height="600" xmlns="http://www.w3.org/2000/svg"><defs><radialGradient id="bg" r="75%"><stop offset="0" stop-color="#09090e"/><stop offset="1" stop-color="#020204"/></radialGradient><filter id="glow"><feGaussianBlur stdDeviation="12" result="coloredBlur"/><feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs><rect width="100%" height="100%" fill="url(#bg)"/><path d="M 400 300 Q 450 200, 550 250 T 350 400 T 250 200 T 550 450" fill="none" stroke="#ff8c00" stroke-width="6" filter="url(#glow)"/><path d="M 400 300 Q 450 200, 550 250 T 350 400 T 250 200 T 550 450" fill="none" stroke="#fff" stroke-width="1.5"/></svg>`;
 
 const PRESET_GALLERY: GalleryItem[] = [
   {
@@ -95,7 +95,7 @@ export function GallerySection() {
                 src={item.image}
                 alt="Masterpiece"
                 className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-              />
+             />
             </div>
             
             <div className="p-6 flex justify-between items-center bg-[#faf8f5]">
@@ -113,7 +113,7 @@ export function GallerySection() {
                   className="p-3 rounded-2xl bg-[#1DA1F2]/10 border border-[#1DA1F2]/20 text-[#1DA1F2] hover:bg-[#1DA1F2] hover:text-white transition-all duration-300"
                   title="Share to X"
                 >
-                  <Share2 size={16} />
+                  <Share2 size={16}/>
                 </a>
                 
                 {!item.isPreset && (
@@ -122,7 +122,7 @@ export function GallerySection() {
                     className="p-3 rounded-2xl bg-red-500/10 border border-red-500/20 text-red-500 hover:bg-red-500 hover:text-white transition-all duration-300"
                     title="Delete Snapshot"
                   >
-                    <Trash2 size={16} />
+                    <Trash2 size={16}/>
                   </button>
                 )}
               </div>

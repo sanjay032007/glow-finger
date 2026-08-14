@@ -1,5 +1,4 @@
-import { OrbitControls } from '@react-three/drei';
-import { useRef, useState, useEffect, useCallback } from 'react';
+import { useRef, useState, useEffect, useCallback, useMemo, memo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Canvas } from '@react-three/fiber';
 import * as THREE from 'three';
@@ -19,29 +18,26 @@ import { useSmoothDrawing, type DrawMode, type SymmetryMode } from './hooks/useS
 import { useGameEngine } from './hooks/useGameEngine';
 import { Onboarding } from './components/Onboarding';
 import { FPSIndicator } from './components/FPSIndicator';
-import type { EnvMode } from './components/Environments';
 import { audio } from './utils/audio';
 import { 
   Palette, Eraser, Camera, Trash2, Undo, Video, Bug, 
   Sparkles as SparklesIcon, Gamepad2, Trophy, Flame, Play, X, 
-  Volume2, VolumeX, Zap, Rainbow, FolderHeart, Repeat, SlidersHorizontal, Share2, Image as ImageIcon, Box, Smile
+  Volume2, VolumeX, Zap, Rainbow, FolderHeart, Repeat, SlidersHorizontal, Share2, Box, Smile
 } from 'lucide-react';
 
 
 import { useFrame } from '@react-three/fiber';
 
-const AnimatedBlock = ({ 
+const AnimatedBlock = memo(({ 
   position, 
   color, 
   disintegratedAt, 
   drift,
-  theme
 }: { 
   position: [number, number, number]; 
   color: string; 
   disintegratedAt?: number; 
   drift?: [number, number, number];
-  theme: 'NEON' | 'PAPERCRAFT';
 }) => {
   const meshRef = useRef<THREE.Mesh>(null!);
   const [scale, setScale] = useState(0);
@@ -83,8 +79,7 @@ const AnimatedBlock = ({
   return (
     <mesh ref={meshRef} position={finalPosition}>
       <boxGeometry args={[39.5, 39.5, 39.5]} />
-      {theme === 'PAPERCRAFT' ? (
-        <meshStandardMaterial 
+      <meshStandardMaterial 
           color={color} 
           roughness={0.95}
           metalness={0.0}
@@ -92,34 +87,18 @@ const AnimatedBlock = ({
           transparent 
           opacity={opacity} 
         />
-      ) : (
-        <meshPhysicalMaterial 
-          color={color} 
-          emissive={color} 
-          emissiveIntensity={disintegratedAt ? 0.6 * opacity : 1.2 * opacity} 
-          roughness={0.15}
-          metalness={0.3}
-          transmission={0.6}
-          thickness={2}
-          clearcoat={1}
-          clearcoatRoughness={0.1}
-          transparent 
-          opacity={0.9 * opacity} 
-        />
-      )}
       <lineSegments>
         <edgesGeometry attach="geometry" args={[new THREE.BoxGeometry(39.5, 39.5, 39.5)]} />
         <lineBasicMaterial 
           attach="material" 
-          color={theme === 'PAPERCRAFT' ? "#000000" : "#ffffff"} 
+          color={"#000000"} 
           transparent 
-          opacity={theme === 'PAPERCRAFT' ? 0.15 * opacity : 0.6 * opacity} 
+          opacity={0.15 * opacity} 
         />
       </lineSegments>
     </mesh>
   );
-};
-
+});
 
 const PAPER_COLORS = ['#2c2b29', '#c45c55', '#d4a34b', '#7c8e65', '#59708f', '#b87a55'];
 
@@ -141,7 +120,6 @@ function App() {
   const [showPreview, setShowPreview] = useState(true);
   const [showDebug, setShowDebug] = useState(false);
   const [isAudioEnabled, setIsAudioEnabled] = useState(false);
-  const [envMode, setEnvMode] = useState<EnvMode>('NEON');
   const [page, setPage] = useState<'LANDING' | 'FILTERS'>('LANDING');
     
   const [showSliders, setShowSliders] = useState(false);
@@ -204,14 +182,6 @@ function App() {
     });
   };
 
-  const cycleEnvironment = () => {
-    audio.playClick();
-    setEnvMode((prev) => {
-      if (prev === 'NEON') return 'SYNTHWAVE';
-      if (prev === 'SYNTHWAVE') return 'CYBERPUNK';
-      return 'NEON';
-    });
-  };
 
   const { isReady, error, handStateRef, secondHandLandmarksRef, debugInfo } = useARTracking(
     videoRef, 
@@ -469,18 +439,20 @@ function App() {
   }, [isLaunched, activeTab]);
 
 const gameEngine = useGameEngine();
+  const drawOptions = useMemo(() => ({
+      color: theme === 'PAPERCRAFT' && color === PAPER_COLORS[0] ? '#2c2b29' : color,
+      size,
+      glow: theme === 'PAPERCRAFT' ? 0 : glow,
+      mode,
+      symmetry,
+      theme: theme as 'NEON' | 'PAPERCRAFT'
+    }), [color, size, glow, mode, symmetry, theme]);
+
   const { clearCanvas, saveToGallery, undo } = useSmoothDrawing(
     canvasRef, 
     cursorCanvasRef, 
     handStateRef, 
-    { 
-      color: theme === 'PAPERCRAFT' && color === PAPER_COLORS[0] ? '#2c2b29' : color, 
-      size, 
-      glow: theme === 'PAPERCRAFT' ? 0 : glow, 
-      mode, 
-      symmetry,
-      theme
-    }, 
+    drawOptions, 
     gameEngine, 
     videoRef, 
     showPreview
@@ -582,12 +554,12 @@ const gameEngine = useGameEngine();
           >
             <div className="flex items-center gap-3 cursor-pointer" onClick={() => setPage('LANDING')}>
               <div className={`w-10 h-10 rounded-xl p-[2px] ${
-                theme === 'PAPERCRAFT' ? 'bg-gradient-to-br from-[#8a6d3b] to-[#b87a55]' : 'bg-gradient-to-br from-[#00f3ff] to-[#b026ff]'
+                'bg-gradient-to-br from-[#8a6d3b] to-[#b87a55]'
               }`}>
                 <div className={`w-full h-full rounded-[10px] flex items-center justify-center ${
-                  theme === 'PAPERCRAFT' ? 'bg-[#faf8f5]' : 'bg-black'
+                  'bg-[#faf8f5]'
                 }`}>
-                  <SparklesIcon className={`w-5 h-5 ${theme === 'PAPERCRAFT' ? 'text-[#8a6d3b]' : 'text-[#00f3ff]'}`} />
+                  <SparklesIcon className={`w-5 h-5 ${'text-[#8a6d3b]'}`} />
                 </div>
               </div>
               <span className={`font-extrabold text-2xl tracking-widest ${
@@ -626,7 +598,7 @@ const gameEngine = useGameEngine();
                     }}
                     onMouseEnter={handleHover}
                     className={`text-sm font-semibold tracking-wide transition-colors ${
-                      theme === 'PAPERCRAFT' ? 'text-[#5c5952] hover:text-[#2c2b29]' : 'text-[#4a453f]/70 hover:text-[#4a453f]'
+                      'text-[#5c5952] hover:text-[#2c2b29]'
                     } ${item === 'Face Filters' ? 'font-extrabold text-[#2c2b29] border-b-2 border-[#8a6d3b]' : ''}`}
                   >
                     {item}
@@ -702,20 +674,17 @@ const gameEngine = useGameEngine();
         {/* 3D Background & Hand Canvas with Origami Shading Lights */}
         <div className="fixed inset-0 z-0 pointer-events-auto">
           <Canvas camera={{ position: [0, 0, 8], fov: 45 }}>
-            {theme === 'PAPERCRAFT' ? (
-              <>
+            <>
                 <ambientLight intensity={0.75} />
                 <directionalLight position={[10, 20, 15]} intensity={1.6} />
                 <directionalLight position={[-10, -10, -5]} intensity={0.3} color="#dfc2a5" />
               </>
-            ) : null}
             {/* Interactive 3D Hand */}
             <Hand3D isMobile={false} handStateRef={handStateRef} theme={theme} />
           </Canvas>
         </div>
 
         {/* Grid Overlay */}
-        {theme !== 'PAPERCRAFT' && <div className="absolute inset-0 z-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImdyaWQiIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdHRlcm4gaWQ9InNtYWxsR3JpZCIgd2lkdGg9IjEwIiBoZWlnaHQ9IjEwIiBwYXR0ZXJuVW5pdHM9InVzZXJTcGFjZU9uVXNlIj48cGF0aCBkPSJNMTAgMEwwIDBMMCAxMCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJyZ2JhKDI1NSwyNTUsMjU1LDAuMDMiIHN0cm9rZS13aWR0aD0iMSIvPjwvcGF0dGVybj48cmVjdCB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIGZpbGw9InVybCgjc21hbGxHcmlkKSIvPjxwYXRoIGQ9Ik00MCAwTDAgMEwwIDQwIiBmaWxsPSJub25lIiBzdHJva2U9InJnYmEoMjU1LDI1NSwyNTUsMC4wNSkiIHN0cm9rZS13aWR0aD0iMSIvPjwvcGF0dGVybj48L2RlZnM+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0idXJsKCNncmlkKSIvPjwvc3ZnPg==')] opacity-30 pointer-events-none"></div>}
 
         {/* Mini Mouse-Drawing Canvas */}
         <MiniDrawCanvas />
@@ -727,12 +696,12 @@ const gameEngine = useGameEngine();
         >
           <div className="flex items-center gap-3 cursor-pointer" onClick={() => setPage('LANDING')}>
             <div className={`w-10 h-10 rounded-xl p-[2px] ${
-              theme === 'PAPERCRAFT' ? 'bg-gradient-to-br from-[#8a6d3b] to-[#b87a55]' : 'bg-gradient-to-br from-[#00f3ff] to-[#b026ff]'
+              'bg-gradient-to-br from-[#8a6d3b] to-[#b87a55]'
             }`}>
               <div className={`w-full h-full rounded-[10px] flex items-center justify-center ${
-                theme === 'PAPERCRAFT' ? 'bg-[#faf8f5]' : 'bg-black'
+                'bg-[#faf8f5]'
               }`}>
-                <SparklesIcon className={`w-5 h-5 ${theme === 'PAPERCRAFT' ? 'text-[#8a6d3b]' : 'text-[#00f3ff]'}`} />
+                <SparklesIcon className={`w-5 h-5 ${'text-[#8a6d3b]'}`} />
               </div>
             </div>
             <span className={`font-extrabold text-2xl tracking-widest ${
@@ -772,7 +741,7 @@ const gameEngine = useGameEngine();
                   }}
                   onMouseEnter={handleHover}
                   className={`text-sm font-semibold tracking-wide transition-colors ${
-                    theme === 'PAPERCRAFT' ? 'text-[#5c5952] hover:text-[#2c2b29]' : 'text-white/70 hover:text-white'
+                    'text-[#5c5952] hover:text-[#2c2b29]'
                   } ${item === 'Face Filters' && page === ('FILTERS' as any) ? 'font-extrabold text-[#2c2b29] border-b-2 border-[#8a6d3b]' : ''}`}
                 >
                   {item}
@@ -802,7 +771,7 @@ const gameEngine = useGameEngine();
                 className="text-5xl md:text-7xl lg:text-8xl font-black tracking-tighter mb-6 leading-tight drop-shadow-2xl"
               >
                 <span className={`text-transparent bg-clip-text bg-gradient-to-b ${
-                  theme === 'PAPERCRAFT' ? 'from-[#2c2b29] to-[#5c5952]' : 'from-white to-white/70'
+                  'from-[#2c2b29] to-[#5c5952]'
                 }`}>Paint Reality With</span><br />
                 <span className={`text-transparent bg-clip-text bg-gradient-to-r ${
                   theme === 'PAPERCRAFT' 
@@ -814,7 +783,7 @@ const gameEngine = useGameEngine();
               <motion.p 
                 initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ duration: 0.7, delay: 0.4 }}
                 className={`text-base md:text-lg lg:text-xl max-w-xl mb-12 leading-relaxed font-light ${
-                  theme === 'PAPERCRAFT' ? 'text-[#5c5952]' : 'text-white/60 drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]'
+                  'text-[#5c5952]'
                 }`}
               >
                 No apps. No headsets. Just your camera. Experience frictionless augmented reality drawing and gaming directly in your browser.
@@ -825,9 +794,6 @@ const gameEngine = useGameEngine();
                 whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
                 className="pointer-events-auto relative group"
               >
-                {theme !== 'PAPERCRAFT' && (
-                  <div className="absolute -inset-1 bg-gradient-to-r from-[#00f3ff] via-[#b026ff] to-[#ff007f] rounded-[26px] blur-xl opacity-35 group-hover:opacity-75 group-hover:blur-2xl transition-all duration-500 z-0"></div>
-                )}
                 <button 
                   onClick={handleLaunch}
                   onMouseEnter={handleHover}
@@ -865,15 +831,15 @@ const gameEngine = useGameEngine();
                 <div 
                   className="w-14 h-14 rounded-2xl flex items-center justify-center mb-6 transition-transform duration-500 group-hover:scale-110" 
                   style={{ 
-                    backgroundColor: theme === 'PAPERCRAFT' ? '#8a6d3b15' : `${f.color}15`, 
+                    backgroundColor: '#8a6d3b15', 
                     color: theme === 'PAPERCRAFT' ? '#8a6d3b' : f.color, 
-                    boxShadow: theme === 'PAPERCRAFT' ? 'none' : `0 0 30px ${f.color}20` 
+                    boxShadow: 'none' 
                   }}
                 >
                   <f.icon size={26} />
                 </div>
-                <h3 className={`font-bold text-xl mb-3 ${theme === 'PAPERCRAFT' ? 'text-[#2c2b29]' : 'text-white'}`}>{f.title}</h3>
-                <p className={`${theme === 'PAPERCRAFT' ? 'text-[#5c5952]' : 'text-white/50'} leading-relaxed`}>{f.desc}</p>
+                <h3 className={`font-bold text-xl mb-3 ${'text-[#2c2b29]'}`}>{f.title}</h3>
+                <p className={`${'text-[#5c5952]'} leading-relaxed`}>{f.desc}</p>
               </div>
             ))}
           </motion.div>
@@ -895,7 +861,7 @@ const gameEngine = useGameEngine();
       animate={{ x: gameEngine.shake ? [-15, 15, -10, 10, -5, 5, 0] : 0 }}
       transition={{ duration: 0.3 }}
       className={`relative w-full h-[100dvh] overflow-hidden transition-colors duration-500 ${
-        theme === 'PAPERCRAFT' ? 'bg-[#f5f2eb] text-[#2c2b29]' : 'bg-[#050505] text-white'
+        'bg-[#f5f2eb] text-[#2c2b29]'
       }`}
       onClick={() => setShowColorPicker(false)}
     >
@@ -1037,12 +1003,9 @@ const gameEngine = useGameEngine();
                       position={[x, y, z]} 
                       color={b.color} 
                       disintegratedAt={b.disintegratedAt}
-                      drift={b.drift}
-                      theme={theme}
-                    />
+                      drift={b.drift}                    />
                   );
                 })}
-                <OrbitControls makeDefault />
                 
               </Canvas>
             </div>
@@ -1133,7 +1096,6 @@ const gameEngine = useGameEngine();
       )}
 
       
-      /* Leftover Mode Toggle Removed */
 
       {/* Top HUD Bar for Game Mode */}
       <AnimatePresence>
@@ -1391,14 +1353,6 @@ const gameEngine = useGameEngine();
           </button>
           <button onClick={handleSaveToGallery} onMouseEnter={handleHover} className="shrink-0 p-3 rounded-full text-white/50 hover:text-[#39ff14] hover:bg-[#4a453f]/5 transition-all" title="Save to Local Gallery">
             <FolderHeart size={20} />
-          </button>
-          <button 
-            onClick={cycleEnvironment} 
-            onMouseEnter={handleHover} 
-            className="shrink-0 p-3 rounded-full text-white/50 hover:text-[#b026ff] hover:bg-[#4a453f]/5 transition-all hidden sm:block" 
-            title={`Environment: ${envMode}`}
-          >
-            <ImageIcon size={20} />
           </button>
           
           <div className="w-px h-8 bg-[#4a453f]/15 mx-2 hidden sm:block"></div>

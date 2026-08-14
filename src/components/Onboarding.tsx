@@ -13,12 +13,12 @@ export const Onboarding = ({ handStateRef }: Props) => {
   const [currentGesture, setCurrentGesture] = useState<string>('NONE');
 
   useEffect(() => {
-    if (!handStateRef) return;
+    if (!handStateRef || dismissed || activeTab !== 0) return;
     const interval = setInterval(() => {
       setCurrentGesture(handStateRef.current.gesture);
     }, 100);
     return () => clearInterval(interval);
-  }, [handStateRef]);
+  }, [handStateRef, dismissed, activeTab]);
 
   if (dismissed) return null;
 
@@ -234,3 +234,4 @@ export const Onboarding = ({ handStateRef }: Props) => {
     </div>
   );
 };
+

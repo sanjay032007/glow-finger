@@ -13,16 +13,6 @@ interface Particle {
   maxLife: number;
 }
 
-interface SpawnedBlock {
-  id: number;
-  gridX: number;
-  gridZ: number;
-  y: number;
-  targetY: number;
-  velocity: number;
-  isSnapped: boolean;
-  color: string;
-}
 
 export function Hand3D({ isMobile, handStateRef, theme = 'NEON' }: { isMobile: boolean; handStateRef?: React.RefObject<any>; theme?: 'NEON' | 'PAPERCRAFT' }) {
   const PAPER_PARTICLE_COLORS = useMemo(() => [
@@ -39,18 +29,6 @@ export function Hand3D({ isMobile, handStateRef, theme = 'NEON' }: { isMobile: b
 
   const { scene } = useGLTF('/right.glb');
     const group = useRef<THREE.Group>(null!);
-  // Spawned Blocks physics state
-  const spawnedBlocksRef = useRef<SpawnedBlock[]>([]);
-  const lastSpawnTimeRef = useRef(0);
-  const blockIdCounterRef = useRef(0);
-  const heightMapRef = useRef<Record<string, number>>({});
-  // Voxel Grid refs & memoized positions (Interacts with fingertips)
-  const voxelsRef = useRef<{
-    mesh: THREE.Mesh;
-    baselineY: number;
-    x: number;
-    z: number;
-  }[]>([]);
 
     const ring1 = useRef<THREE.Mesh>(null!);
   const ring2 = useRef<THREE.Mesh>(null!);
@@ -489,136 +467,7 @@ export function Hand3D({ isMobile, handStateRef, theme = 'NEON' }: { isMobile: b
       jointPointsRef.current.geometry.attributes.color.needsUpdate = true;
     }
 
-    // 9. Voxel Spawning & Stacking Physics
-    const nowTime = Date.now();
 
-    // Spawn a block when gesture is OK (👌) or when mouse is clicked (isClickedRef.current)
-    const isSpawningGesture = currentGesture === 'OK' || currentGesture === 'PINCH';
-    
-    if ((isSpawningGesture || isClickedRef.current) && nowTime - lastSpawnTimeRef.current > 350) {
-      // Find the index fingertip bone to get spawn position
-      const indexTipBone = bonesRef.current.tips.find(b => b.name.toLowerCase().includes('index'));
-      if (indexTipBone) {
-        const spawnPos = new THREE.Vector3();
-        indexTipBone.getWorldPosition(spawnPos);
-
-        const size = 0.55;
-        // Snap to nearest grid coordinate
-        const gridX = Math.round((spawnPos.x - handX) / (size + 0.08));
-        const gridZ = Math.round(spawnPos.z / (size + 0.08));
-
-        // Limit grid bounds to match floor grid size
-        if (Math.abs(gridX) <= 4 && Math.abs(gridZ) <= 4) {
-          const colKey = `${gridX}_${gridZ}`;
-          const currentHeight = heightMapRef.current[colKey] || 0;
-
-          if (currentHeight < 8) { // max 8 blocks stacked
-            const targetY = -2.3 + (currentHeight * size);
-            
-            // Spawn the block!
-            const newBlock: SpawnedBlock = {
-              id: blockIdCounterRef.current++,
-              gridX,
-              gridZ,
-              y: spawnPos.y, // Start falling from fingertip height
-              targetY,
-              velocity: 0,
-              isSnapped: false,
-              color: currentGesture === 'OK' ? '#00f3ff' : '#ff007f' // Cyan for gesture, magenta for click
-            };
-
-            spawnedBlocksRef.current.push(newBlock);
-            heightMapRef.current[colKey] = currentHeight + 1;
-            lastSpawnTimeRef.current = nowTime;
-            
-            // Update React state so R3F renders the new block
-                      }
-        }
-      }
-    }
-
-    // Process gravity and landing/snapping physics
-    let stateChanged = false;
-    spawnedBlocksRef.current.forEach((block) => {
-      if (block.isSnapped) return;
-
-      // Apply simple acceleration
-      block.velocity += 12 * delta; // Gravity constant
-      block.y -= block.velocity * delta;
-
-      // Check if it reached the target snap height
-      if (block.y <= block.targetY) {
-        block.y = block.targetY;
-        block.velocity = 0;
-        block.isSnapped = true;
-        stateChanged = true;
-
-        // Spawn a burst of particles at the snap point!
-        const snapPos = new THREE.Vector3(
-          block.gridX * (0.55 + 0.08) + handX,
-          block.targetY,
-          block.gridZ * (0.55 + 0.08)
-        );
-        for (let i = 0; i < 6; i++) {
-          particlesRef.current.push({
-            id: nextId.current++,
-            position: snapPos.clone(),
-            velocity: new THREE.Vector3(
-              (Math.random() - 0.5) * 1.5,
-              Math.random() * 2.0,
-              (Math.random() - 0.5) * 1.5
-            ),
-            color: new THREE.Color(block.color),
-            size: 0.12,
-            life: 0,
-            maxLife: 0.4 + Math.random() * 0.3
-          });
-        }
-      }
-    });
-
-    if (stateChanged) {
-          }
-
-    // 8. Voxel Grid Interaction (Calculate distance from each block to closest fingertip)
-    const tipsWorldPos = bonesRef.current.tips.map((bone) => {
-      const pos = new THREE.Vector3();
-      bone.getWorldPosition(pos);
-      return pos;
-    });
-
-    voxelsRef.current.forEach((voxel) => {
-      if (!voxel || !voxel.mesh) return;
-
-      let minDist = 9999;
-      tipsWorldPos.forEach((tip) => {
-        // Calculate 3D distance between fingertip and voxel center
-        const voxelWorldPos = new THREE.Vector3(voxel.x + handX, voxel.baselineY, voxel.z);
-        const dist = tip.distanceTo(voxelWorldPos);
-        if (dist < minDist) {
-          minDist = dist;
-        }
-      });
-
-      // Depress block and increase emissive intensity based on proximity
-      const maxTriggerDist = 2.2;
-      const factor = Math.max(0, 1 - (minDist / maxTriggerDist));
-
-      // Standard linear interpolation for smooth depression physics
-      const targetY = voxel.baselineY - (factor * 0.45);
-      voxel.mesh.position.y = THREE.MathUtils.lerp(voxel.mesh.position.y, targetY, 0.15);
-
-      // Dynamically alter material properties
-      const mat = voxel.mesh.material as THREE.MeshPhysicalMaterial;
-      if (mat) {
-        mat.emissiveIntensity = 0.15 + (factor * 2.5);
-        // Color transition from deep cyan to neon magenta/purple on approach
-        const baseColor = new THREE.Color('#00f3ff');
-        const activeColor = new THREE.Color('#ff007f');
-        mat.color.copy(baseColor).lerp(activeColor, factor);
-        mat.emissive.copy(baseColor).lerp(activeColor, factor);
-      }
-    });
 
     // 7. Dynamic light updates
     if (lightRef.current && group.current) {

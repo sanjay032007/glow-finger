@@ -28,7 +28,7 @@ const preloadFaceModel = () => {
   return preloadedFaceLandmarkerPromise;
 };
 
-preloadFaceModel();
+// Preloading is now deferred until enabled (see useEffect below)
 
 export const useFaceTracking = (
   videoRef: React.RefObject<HTMLVideoElement>,
@@ -50,6 +50,8 @@ export const useFaceTracking = (
     let faceLandmarker: FaceLandmarker | null = null;
     let animFrameId: number;
     let stopped = false;
+    let lastStateUpdate = 0;
+    const STATE_UPDATE_INTERVAL = 100; // Throttle React state updates to 10 FPS
 
     const initAndRun = async () => {
       try {
@@ -91,10 +93,13 @@ export const useFaceTracking = (
                   z: lm.z,
                 }));
                 faceLandmarksRef.current = mapped;
-                setFaceLandmarks(mapped);
+                const now2 = performance.now();
+                if (now2 - lastStateUpdate > STATE_UPDATE_INTERVAL) {
+                  setFaceLandmarks(mapped);
+                  lastStateUpdate = now2;
+                }
               } else {
                 faceLandmarksRef.current = null;
-                setFaceLandmarks(null);
               }
             } catch (_) {}
           }
